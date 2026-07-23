@@ -1,10 +1,6 @@
 name: PlatformIO CI
 
-on:
-  push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+on: [push, pull_request]
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -44,9 +40,17 @@ jobs:
         pip install platformio esptool
 
     - name: Build Web Panel Assets
-      run: python tools/build_webpanel.py
+      run: |
+        if [ -f tools/build_webpanel.py ]; then
+          python tools/build_webpanel.py
+        else
+          bash tools/html_converter.sh
+        fi
 
     - name: Run PlatformIO Compilation Checks
       run: |
         pio run -e ESP8266_DEBUG
         pio run -e ESP32_DEBUG
+
+    - name: Run PlatformIO Unit Tests
+      run: pio test -e native
