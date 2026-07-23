@@ -1,0 +1,45 @@
+site_name: "EasyIot Codebase Wiki"
+site_description: "A knowledge graph-driven developer documentation and architecture wiki for EasyIot."
+site_author: "Bruno Horta"
+
+docs_dir: "graphify-out/wiki"
+site_dir: "graphify-out/wiki_site"
+
+theme:
+  name: "material"
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: "slate"
+      primary: "teal"
+      accent: "teal"
+      toggle:
+        icon: "material/weather-sunny"
+        name: "Switch to light mode"
+    - media: "(prefers-color-scheme: light)"
+      scheme: "default"
+      primary: "teal"
+      accent: "teal"
+      toggle:
+        icon: "material/weather-night"
+        name: "Switch to dark mode"
+  features:
+    - "navigation.tabs"
+    - "navigation.top"
+    - "search.suggest"
+    - "search.highlight"
+    - "content.code.copy"
+    - "content.tooltips"
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji
