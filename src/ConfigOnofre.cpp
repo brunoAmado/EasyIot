@@ -9,6 +9,9 @@
 #include "Images.hpp"
 #include <PZEM004Tv30.h>
 #include "HomeAssistantMqttDiscovery.h"
+
+static constexpr const char *kFirmwareBuildDate = __DATE__ " " __TIME__;
+
 void actuatoresCallback(message_t const &msg, void *arg);
 void ConfigOnofre::generateId(String &id, const String &name, int familyCode, int io, size_t maxSize)
 {
@@ -218,11 +221,11 @@ ConfigOnofre &ConfigOnofre::load()
   {
     chipIdHex |= ((ESP.getEfuseMac() >> (40 - i)) & 0xff) << i;
   }
-  templateId = doc["templateId"];
   strlcpy(chipId, String(chipIdHex).c_str(), sizeof(chipId));
   sprintf(provisionId, "ONOFRE%s", chipId);
 
 #endif
+  templateId = doc["templateId"] | 0;
   strlcpy(nodeId,
           doc["nodeId"] | chipId,
           sizeof(nodeId));
@@ -455,7 +458,7 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
     {
       if (state == ActuatorState::TOGGLE)
       {
-        state = a.state == ActuatorState::ON_CLOSE ? ActuatorState::OFF_OPEN : ActuatorState::ON_CLOSE;
+        state = a.state > 0 ? ActuatorState::OFF_OPEN : ActuatorState::ON_CLOSE;
       }
       a.changeState(origin, state);
       this->save();
@@ -474,7 +477,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
   dhcp = root["dhcp"] | true;
   String mqttPasswordStr = root["mqttPassword"] | "";
-  if (root.containsKey("mqttPassword") && mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (root["mqttPassword"].is<const char*>() && mqttPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
   {
     strlcpy(mqttPassword, mqttPasswordStr.c_str(), sizeof(mqttPassword));
 #ifdef DEBUG_ONOFRE
@@ -483,7 +486,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
 
   String wifiSecretStr = root["wifiSecret"] | "";
-  if (root.containsKey("wifiSecret") && wifiSecretStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (root["wifiSecret"].is<const char*>() && wifiSecretStr.compareTo(constantsConfig::PW_HIDE) != 0)
   {
     strlcpy(wifiSecret, wifiSecretStr.c_str(), sizeof(wifiSecret));
 #ifdef DEBUG_ONOFRE
@@ -492,7 +495,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
 
   String accessPointPasswordStr = root["accessPointPassword"] | constantsConfig::apSecret;
-  if (root.containsKey("accessPointPassword") && accessPointPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (root["accessPointPassword"].is<const char*>() && accessPointPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
   {
     strlcpy(accessPointPassword, accessPointPasswordStr.c_str(), sizeof(accessPointPassword));
 #ifdef DEBUG_ONOFRE
@@ -501,7 +504,7 @@ ConfigOnofre &ConfigOnofre::update(JsonObject &root)
   }
 
   String apiPasswordStr = root["apiPassword"] | constantsConfig::apiPassword;
-  if (root.containsKey("apiPassword") && apiPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
+  if (root["apiPassword"].is<const char*>() && apiPasswordStr.compareTo(constantsConfig::PW_HIDE) != 0)
   {
     strlcpy(apiPassword, apiPasswordStr.c_str(), sizeof(apiPassword));
 #ifdef DEBUG_ONOFRE
@@ -642,6 +645,7 @@ void ConfigOnofre::json(JsonVariant &root, bool allFields)
   root["wifiMask"] = WiFi.subnetMask().toString();
   root["wifiGw"] = WiFi.gatewayIP().toString();
   root["firmware"] = String(VERSION);
+  root["buildDate"] = kFirmwareBuildDate;
 #ifdef ESP32
 #ifdef ESP32_MAKER_4MB
   root["mcu"] = "ESP32-MAKER-4MB";
@@ -789,6 +793,34 @@ void ConfigOnofre::loopActuators()
     for (auto &button : sw.buttons)
     {
       button.loop();
+      if (sw.isDimmer() && button.isPressed() && button.wasPressedFor() > 500)
+      {
+        unsigned long now = millis();
+        if (now - sw.lastDimTime > 50)
+        {
+          sw.lastDimTime = now;
+          int newState = sw.state;
+          if (sw.dimmingUp)
+          {
+            newState += 2;
+            if (newState >= 100)
+            {
+              newState = 100;
+              sw.dimmingUp = false;
+            }
+          }
+          else
+          {
+            newState -= 2;
+            if (newState <= 5)
+            {
+              newState = 5;
+              sw.dimmingUp = true;
+            }
+          }
+          sw.changeState(StateOrigin::GPIO_INPUT, newState);
+        }
+      }
     }
     if (wifiConnected() && sw.isKnxSupport())
     {

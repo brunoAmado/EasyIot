@@ -18,6 +18,16 @@ extern ConfigOnofre config;
 AsyncMqttClient mqttClient;
 Ticker checkCloudIOWatchdog;
 
+namespace
+{
+const uint16_t kCloudIoRequestTimeoutMs = 12000;
+#ifdef ESP32
+const int32_t kCloudIoConnectTimeoutMs = 8000;
+#endif
+const uint8_t kCloudIoHttpsRetryCount = 3;
+const uint16_t kCloudIoRetryBackoffMs = 1500;
+}
+
 void disconnectToClounIOMqtt()
 {
 #ifdef DEBUG_ONOFRE
@@ -58,6 +68,7 @@ void onMqttConnect(bool sessionPresent)
 {
 #ifdef DEBUG_ONOFRE
   Log.warning("%s Connected to MQTT." CR, tags::cloudIO);
+  Log.info("----------------------------------------------" CR);
 #endif
   mqttClient.publish(config.cloudIOhealthTopic, 0, true, "1\0");
   subscribeOnMqttCloudIO(config.cloudIOwriteTopic);
@@ -92,6 +103,7 @@ void onMqttMessage(char *topic, char *payload, AsyncMqttClientMessageProperties 
   char msg[len + 1];
   strlcpy(msg, payload, sizeof(msg));
 #ifdef DEBUG_ONOFRE
+  Log.info("----------------------------------------------" CR);
   Log.info("%s Message from MQTT. %s %s" CR, tags::cloudIO, topic, msg);
 #endif
   if (strcmp(topic, config.cloudIOwriteTopic) == 0)
@@ -183,7 +195,7 @@ void connectToCloudIO()
   if (!wifiConnected())
   {
 #ifdef DEBUG_ONOFRE
-    Log.error("%s WIFI DISCONECTED" CR, tags::cloudIO);
+    Log.error("%s WIFI DISCONNECTED" CR, tags::cloudIO);
 #endif
     return;
   }
@@ -194,14 +206,25 @@ void connectToCloudIO()
   serializeJson(doc, payload);
   String responsePayload = "";
   int httpCode = -1;
-  String requestUrl = String(constanstsCloudIO::configUrl);
+  const String requestUrl = String(constanstsCloudIO::configUrl);
+  String fallbackUrl = requestUrl;
   bool usedHttpFallback = false;
 
-  for (uint8_t attempt = 0; attempt < 2; attempt++)
+  if (fallbackUrl.startsWith("https://"))
   {
-    const bool useHttps = requestUrl.startsWith("https://");
+    fallbackUrl.replace("https://", "http://");
+  }
+
+  auto postCloudConfig = [&](const String &url, const bool useHttps, const uint8_t attempt, const uint8_t totalAttempts) -> int
+  {
     HTTPClient request;
+    request.setReuse(false);
+    request.setTimeout(kCloudIoRequestTimeoutMs);
+#ifdef ESP32
+    request.setConnectTimeout(kCloudIoConnectTimeoutMs);
+#endif
     bool beginOk = false;
+    int responseCode = -1;
 
     if (useHttps)
     {
@@ -211,53 +234,98 @@ void connectToCloudIO()
       WiFiClientSecure client;
 #endif
       client.setInsecure();
-      beginOk = request.begin(client, requestUrl);
+      beginOk = request.begin(client, url);
       if (beginOk)
       {
         request.addHeader("Content-Type", "application/json");
-        httpCode = request.POST(payload.c_str());
-        if (httpCode == HTTP_CODE_OK)
+        responseCode = request.POST(payload.c_str());
+        if (responseCode == HTTP_CODE_OK)
         {
           responsePayload = request.getString();
         }
       }
-      request.end();
     }
     else
     {
       WiFiClient client;
-      beginOk = request.begin(client, requestUrl);
+      beginOk = request.begin(client, url);
       if (beginOk)
       {
         request.addHeader("Content-Type", "application/json");
-        httpCode = request.POST(payload.c_str());
-        if (httpCode == HTTP_CODE_OK)
+        responseCode = request.POST(payload.c_str());
+        if (responseCode == HTTP_CODE_OK)
         {
           responsePayload = request.getString();
         }
       }
-      request.end();
     }
+    request.end();
 
     if (!beginOk)
     {
-      httpCode = -1;
+      responseCode = -1;
     }
 
-    // If HTTPS handshake/connection fails, retry once over HTTP for compatibility.
-    if (httpCode < 0 && useHttps && !usedHttpFallback)
+#ifdef DEBUG_ONOFRE
+    if (responseCode < 0)
+    {
+      const String errorLabel = HTTPClient::errorToString(responseCode);
+      Log.warning("%s [HTTP] %s attempt %u/%u failed: code=%d error=%s rssi=%d" CR,
+                  tags::cloudIO,
+                  useHttps ? "HTTPS" : "HTTP",
+                  attempt,
+                  totalAttempts,
+                  responseCode,
+                  errorLabel.c_str(),
+                  WiFi.RSSI());
+    }
+    else
+    {
+      Log.info("%s [HTTP] %s attempt %u/%u result: %d" CR,
+               tags::cloudIO,
+               useHttps ? "HTTPS" : "HTTP",
+               attempt,
+               totalAttempts,
+               responseCode);
+    }
+#endif
+
+    return responseCode;
+  };
+
+  const bool supportsHttps = requestUrl.startsWith("https://");
+  if (supportsHttps)
+  {
+    for (uint8_t attempt = 1; attempt <= kCloudIoHttpsRetryCount; attempt++)
+    {
+      httpCode = postCloudConfig(requestUrl, true, attempt, kCloudIoHttpsRetryCount);
+      if (httpCode >= 0)
+      {
+        break;
+      }
+      if (attempt < kCloudIoHttpsRetryCount)
+      {
+        delay(kCloudIoRetryBackoffMs);
+      }
+    }
+
+    // Fallback to plain HTTP only when HTTPS repeatedly fails to establish.
+    if (httpCode < 0)
     {
       usedHttpFallback = true;
-      requestUrl.replace("https://", "http://");
-      continue;
+      httpCode = postCloudConfig(fallbackUrl, false, 1, 1);
     }
-
-    break;
   }
+  else
+  {
+    httpCode = postCloudConfig(requestUrl, false, 1, 1);
+  }
+
   doc.clear();
   config.cloudIOReady = false;
 #ifdef DEBUG_ONOFRE
-  Log.info("%s [HTTP]  Request result: %d" CR, tags::cloudIO, httpCode);
+  Log.info("%s [HTTP] Request result: %d (fallback=%d)" CR, tags::cloudIO, httpCode, usedHttpFallback ? 1 : 0);
+  Log.info("----------------------------------------------" CR);
 #endif
   if (httpCode == HTTP_CODE_NO_CONTENT)
   {
@@ -265,11 +333,6 @@ void connectToCloudIO()
     Log.info("%s [HTTP] Device not adopted" CR, tags::cloudIO);
 #endif
     config.stopCloudIOWatchdog();
-    return;
-  }
-  if (httpCode != HTTP_CODE_OK)
-  {
-    return;
   }
   else if (httpCode == HTTP_CODE_OK)
   {
