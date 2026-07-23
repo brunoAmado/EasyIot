@@ -1,6 +1,7 @@
 <img src="https://github.com/brunohorta82/BH-Easy-Iot/blob/master/screenshots/logo.png " width="220">
 
 * [Intro](#id1)
+* [Documentação Wiki](wiki/index.md)
 * [BH ONOFRE BOARD](https://github.com/brunohorta82/BH_OnOfre)
 * [BH PZEM BOARD](https://github.com/brunohorta82/BH_PZEM_ESP8266)
 * [Video Tutoriais - YouTube](https://www.youtube.com/watch?v=OZenBfHWtak&list=PLxDLawCWayzDqAgOpIDJ-DHFAXYd_S-pr)
