@@ -110,7 +110,7 @@ public:
     response->print(FPSTR(HTTP_SCRIPT));
     response->print(FPSTR(HTTP_STYLE));
     response->print(FPSTR(HTTP_HEADER_END));
-    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
+    if (request->method() == HTTP_POST && request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
     {
       String n_name = config.chipId;
       if (request->hasArg("i"))
@@ -145,7 +145,7 @@ public:
       store = true;
     }
 
-    if (request->hasArg("sc"))
+    if (request->method() == HTTP_GET && request->hasArg("sc"))
     {
       int n = WiFi.scanComplete();
       if (n == -2)
@@ -289,8 +289,10 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     config.json(root,true);
-    response->setLength();
-    request->send(response); });
+    String payload;
+    serializeJsonPretty(root, payload);
+    delete response;
+    request->send(200, "application/json", payload); });
 
   /*SAVE CONFIG*/
   server
@@ -346,10 +348,8 @@ void loadAPI()
     response->setLength();
     request->send(response); }));
 
-  /*REBOOT DEVICE*/
-  server
-      .on("/reboot", HTTP_GET, [](AsyncWebServerRequest *request)
-          {
+  auto rebootHandler = [](AsyncWebServerRequest *request)
+  {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
@@ -359,27 +359,39 @@ void loadAPI()
     root["result"] = "Reboot requested";
     response->setLength();
     request->send(response);
-    config.requestRestart(); });
+    config.requestRestart();
+  };
 
-  /*CHANGE FEATURES TEMPLATE*/
-  server
-      .on("/templates/change", HTTP_GET, [](AsyncWebServerRequest *request)
-          {
+  auto templateChangeHandler = [](AsyncWebServerRequest *request)
+  {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
 #endif
+    AsyncWebParameter *templateParam = nullptr;
+    if (request->hasParam("t", true))
+      templateParam = request->getParam("t", true);
+    else if (request->hasParam("t"))
+      templateParam = request->getParam("t");
+
+    if (templateParam == nullptr)
+    {
+      request->send(errorResponse("Template id is missing"));
+      return;
+    }
+
+    templateSelect((Template)templateParam->value().toInt());
+    config.save();
+
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     root["result"] = "Template changed";
     response->setLength();
     request->send(response);
-    templateSelect((Template)request->getParam("t")->value().toInt());
-    config.save(); });
+  };
 
-  server
-      .on("/load-defaults", HTTP_GET, [](AsyncWebServerRequest *request)
-          {
+  auto loadDefaultsHandler = [](AsyncWebServerRequest *request)
+  {
 #if WEB_SECURE_ON
     if (!request->authenticate(config.apiUser, config.apiPassword, REALM))
       return request->requestAuthentication(REALM);
@@ -389,7 +401,19 @@ void loadAPI()
     root["result"] = "Load defaults requested";
     response->setLength();
     request->send(response);
-    config.requestLoadDefaults(); });
+    config.requestLoadDefaults();
+  };
+
+  // POST is the preferred method for state-changing endpoints.
+  // Keep GET temporarily for backward compatibility with old clients.
+  server.on("/reboot", HTTP_POST, rebootHandler);
+  server.on("/reboot", HTTP_GET, rebootHandler);
+
+  server.on("/templates/change", HTTP_POST, templateChangeHandler);
+  server.on("/templates/change", HTTP_GET, templateChangeHandler);
+
+  server.on("/load-defaults", HTTP_POST, loadDefaultsHandler);
+  server.on("/load-defaults", HTTP_GET, loadDefaultsHandler);
 
   server
       .on("/auto-update", HTTP_POST, [](AsyncWebServerRequest *request)
