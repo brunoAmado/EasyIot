@@ -15,11 +15,13 @@
 #include <WebServer.h>
 #include <HTTPClient.h>
 #include <HTTPUpdate.h>
+#include <WiFiClientSecure.h>
 #include "Update.h"
 #endif
 #ifdef ESP8266
 #include <ESP8266httpUpdate.h>
 #include <ESP8266mDNS.h>
+#include <WiFiClientSecureBearSSL.h>
 #endif
 extern ConfigOnofre config;
 
@@ -32,14 +34,34 @@ void performUpdate()
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Starting auto update make sure if this device is connected to the internet.", tags::system);
 #endif
-  WiFiClient client;
+  const String otaUrl = String(constanstsCloudIO::otaUrl);
+  const bool useHttps = otaUrl.startsWith("https://");
   t_httpUpdate_return ret;
+  if (useHttps)
+  {
 #ifdef ESP8266
-  ret = ESPhttpUpdate.update(client, constanstsCloudIO::otaUrl, String(VERSION));
+    BearSSL::WiFiClientSecure client;
+#else
+    WiFiClientSecure client;
+#endif
+    client.setInsecure();
+#ifdef ESP8266
+    ret = ESPhttpUpdate.update(client, otaUrl, String(VERSION));
 #endif
 #ifdef ESP32
-  ret = httpUpdate.update(client, constanstsCloudIO::otaUrl, String(VERSION));
+    ret = httpUpdate.update(client, otaUrl, String(VERSION));
 #endif
+  }
+  else
+  {
+    WiFiClient client;
+#ifdef ESP8266
+    ret = ESPhttpUpdate.update(client, otaUrl, String(VERSION));
+#endif
+#ifdef ESP32
+    ret = httpUpdate.update(client, otaUrl, String(VERSION));
+#endif
+  }
   switch (ret)
   {
   case HTTP_UPDATE_FAILED:
@@ -88,7 +110,7 @@ public:
     response->print(FPSTR(HTTP_SCRIPT));
     response->print(FPSTR(HTTP_STYLE));
     response->print(FPSTR(HTTP_HEADER_END));
-    if (request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
+    if (request->method() == HTTP_POST && request->hasArg("s") && request->hasArg("i") && request->arg("s").length() > 0 && request->arg("i").length() > 0)
     {
       String n_name = config.chipId;
       if (request->hasArg("i"))
@@ -123,7 +145,7 @@ public:
       store = true;
     }
 
-    if (request->hasArg("sc"))
+    if (request->method() == HTTP_GET && request->hasArg("sc"))
     {
       int n = WiFi.scanComplete();
       if (n == -2)
@@ -267,8 +289,10 @@ void loadAPI()
     AsyncJsonResponse *response = new AsyncJsonResponse();
     JsonVariant &root = response->getRoot();
     config.json(root,true);
-    response->setLength();
-    request->send(response); });
+    String payload;
+    serializeJsonPretty(root, payload);
+    delete response;
+    request->send(200, "application/json", payload); });
 
   /*SAVE CONFIG*/
   server
