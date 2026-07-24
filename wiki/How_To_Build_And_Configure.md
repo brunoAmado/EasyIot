@@ -129,3 +129,50 @@ Whether a feature is registered via a predefined template or custom dynamic conf
 - When the MQTT broker connects, `HomeAssistantMqttDiscovery.cpp` generates a JSON payload for Home Assistant's auto-discovery topics (e.g. `homeassistant/light/.../config` or `homeassistant/sensor/.../config`).
 - This allows Home Assistant to automatically detect, name, and show the device controls without requiring manual configuration in Home Assistant's `configuration.yaml`.
 - Custom topic formats are based on the configured `nodeId` (e.g. `onofre/uniqueId/set` for commands and `onofre/uniqueId/state` for status).
+
+---
+
+## 6. Running Automated Tests
+
+EasyIot supports automated unit testing (C++ firmware logic) and E2E integration testing (Web UI & REST APIs) to ensure code stability.
+
+### A. Firmware Unit Tests (PlatformIO Native)
+We run unit tests compiled natively on your local development machine to verify core firmware algorithms and logic (e.g., dimmer range scaling, shutter runtime calculations, Modbus registers, and auto-off timers).
+
+* **Command to run tests locally**:
+  ```bash
+  pio test -e native
+  ```
+* **Location of tests**: Test cases are defined inside `test/test_main.cpp`.
+
+### B. Web UI & REST API Integration Tests (Playwright)
+To test the web panel interface, mock the ESP web APIs, and verify browser layout/responsiveness, we use a headless E2E testing framework based on Playwright and Express.js.
+
+* **Prerequisites**:
+  - Node.js installed.
+  - Switch to the `test/web-integration` branch.
+* **Commands to run web tests**:
+  ```bash
+  # 1. Navigate to test folder
+  cd web-tests
+
+  # 2. Install testing dependencies
+  npm install
+
+  # 3. Install Playwright browser engines
+  npx playwright install chromium
+
+  # 4. Execute the test runner
+  npm test
+  ```
+* **Tested Viewports / Emulated Devices**:
+  The tests automatically execute across three emulated device profiles to ensure the responsive dashboard renders correctly on both mobile and desktop screens:
+  - **Desktop Chrome** (Standard viewport)
+  - **iPhone 13** (Safari iOS mobile viewport)
+  - **Pixel 5** (Chrome Android mobile viewport)
+* **Tested Scenarios**:
+  - Config loading UI bindings.
+  - SSID and configuration update payload validations (POST `/config`).
+  - Wizard-based new feature creation validations (POST `/features/add`).
+  - Reboot command confirmations (POST `/reboot`).
+
