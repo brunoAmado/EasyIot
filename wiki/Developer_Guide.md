@@ -51,6 +51,7 @@ Sensors inherit from the base `Sensor` class. Each sensor executes an independen
 * **mmWave Presence Radars (HLK-LD2410/50/60)**:
   - Connect via Hardware/Software Serial.
   - Parse UART frames containing target distance, motion energy, and presence status, publishing updates immediately over MQTT.
+  - **Multi-Target Tracking (LD2450/LD2460)**: Parses 2D target positions ($X$, $Y$) and velocities for up to 3/5 concurrent targets, registering individual coordinates as Home Assistant sensor entities dynamically.
 
 ---
 
