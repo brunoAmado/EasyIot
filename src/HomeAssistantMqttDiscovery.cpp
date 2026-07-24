@@ -245,7 +245,7 @@ void addToHomeAssistant(Sensor &s)
     delay(1);
 
     // Register Multi-target coordinates
-    if (driver == LD2450)
+    if (s.driver == LD2450)
     {
       for (int i = 1; i <= 3; i++)
       {
@@ -282,7 +282,7 @@ void addToHomeAssistant(Sensor &s)
         delay(1);
       }
     }
-    else if (driver == LD2460)
+    else if (s.driver == LD2460)
     {
       for (int i = 1; i <= 5; i++)
       {
