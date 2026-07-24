@@ -1,4 +1,4 @@
-let baseUrl = "http://192.168.187.136"
+let baseUrl = window.location.origin && window.location.origin.startsWith("http") ? window.location.origin : "http://192.168.187.136";
 var config;
 var lastVersion = 0.0;
 let source = null;

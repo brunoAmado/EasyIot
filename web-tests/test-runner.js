@@ -3,28 +3,17 @@ const { startServer, stopServer } = require('./mock-server');
 const http = require('http');
 
 // Helper to fetch request logs from mock server
-function getLogs() {
-  return new Promise((resolve) => {
-    http.get('http://localhost:3000/test/logs', (res) => {
-      let data = '';
-      res.on('data', chunk => data += chunk);
-      res.on('end', () => resolve(JSON.parse(data)));
-    });
-  });
+async function getLogs() {
+  const res = await fetch('http://localhost:3000/test/logs');
+  return res.json();
 }
 
-function resetLogs() {
-  return new Promise((resolve) => {
-    const req = http.request({
-      hostname: 'localhost',
-      port: 3000,
-      path: '/test/reset-logs',
-      method: 'POST'
-    }, (res) => {
-      res.on('end', resolve);
-    });
-    req.end();
-  });
+async function resetLogs() {
+  await fetch('http://localhost:3000/test/reset-logs', { method: 'POST' });
+}
+
+async function resetAll() {
+  await fetch('http://localhost:3000/test/reset-all', { method: 'POST' });
 }
 
 async function runTests() {
@@ -46,13 +35,19 @@ async function runTests() {
     for (const dev of devicesToTest) {
       console.log(`\n[TEST] Running E2E Suite on device: ${dev.name}...`);
       
+      // Reset the mock server state before each run
+      await resetAll();
+      
       // Create a context emulating the device configurations (viewport, user agent)
       const context = await browser.newContext(dev.use);
       const page = await context.newPage();
+      page.on('console', msg => console.log(`    [BROWSER CONSOLE] ${msg.text()}`));
+      page.on('pageerror', err => console.error(`    [BROWSER ERROR] ${err.message}`));
 
       console.log(`  -> Navigating to Web Panel on ${dev.name}...`);
       await page.goto(url);
-      await page.waitForLoadState('networkidle');
+      await page.waitForLoadState('load');
+      await page.waitForSelector('#node-btn', { timeout: 10000 });
 
       // SCENARIO 1: Verify Initial Config Load
       console.log('  -> Verifying initial configuration populated in UI...');
@@ -101,11 +96,11 @@ async function runTests() {
       await page.waitForTimeout(500);
 
       const featureLogs = await getLogs();
-      const addFeatureRequest = featureLogs.find(l => l.path === '/features/add' && l.method === 'POST');
+      const addFeatureRequest = featureLogs.find(l => l.path === '/features' && l.method === 'POST');
       if (!addFeatureRequest) {
-        throw new Error(`No POST /features/add request recorded on ${dev.name}`);
+        throw new Error(`No POST /features request recorded on ${dev.name}`);
       }
-      if (addFeatureRequest.body.name !== `Luz ${dev.name}` || addFeatureRequest.body.driver !== '7') {
+      if (addFeatureRequest.body.name !== `Luz ${dev.name}` || parseInt(addFeatureRequest.body.driver) !== 7) {
         throw new Error(`Add feature payload mismatch on ${dev.name}: ${JSON.stringify(addFeatureRequest.body)}`);
       }
 
@@ -116,13 +111,13 @@ async function runTests() {
       
       // Listen for dialog reboot confirmation box and accept it
       page.once('dialog', dialog => dialog.accept());
-      await page.click('button:has-text("Reiniciar")');
+      await page.click('button[onclick="reboot()"]');
       await page.waitForTimeout(500);
 
       const rebootLogs = await getLogs();
-      const rebootRequest = rebootLogs.find(l => l.path === '/reboot' && l.method === 'POST');
+      const rebootRequest = rebootLogs.find(l => l.path === '/reboot');
       if (!rebootRequest) {
-        throw new Error(`No POST /reboot request recorded on ${dev.name}`);
+        throw new Error(`No /reboot request recorded on ${dev.name}`);
       }
 
       await context.close();
