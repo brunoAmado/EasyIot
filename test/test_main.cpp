@@ -74,7 +74,7 @@ uint32_t decode_modbus_32bit(uint16_t reg_high, uint16_t reg_low) {
 
 void test_modbus_telemetry_decoding(void) {
     // Decode 230.5 Volts (stored as 230500 mV or similar 32-bit int)
-    TEST_ASSERT_EQUAL_UINT32(230500, decode_modbus_32bit(0x0003, 0x8454));
+    TEST_ASSERT_EQUAL_UINT32(230500, decode_modbus_32bit(0x0003, 0x8464));
 }
 
 int main(int argc, char **argv) {
