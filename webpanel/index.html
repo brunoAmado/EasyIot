@@ -422,6 +422,8 @@
                         <option value="2">Interruptor Normal Virtual</option>
                         <option value="3">Estore Pulsador Virtual</option>
                         <option value="9">Garagem Virtual</option>
+                        <option value="15">Iluminação RGB (3-PWM)</option>
+                        <option value="16">Regulador Analógico (Potenciómetro)</option>
                         <option value="111">Climatização DHT 11</option>
                         <option value="121">Climatização DHT 21</option>
                         <option value="122">Climatização DHT 22</option>
@@ -446,6 +448,11 @@
                         <label id="pin-down-l" for="f-n-pin-2"><span class="lang-pin-down">Pino</span></label>
                         <select name="pins" class="form-control" id="f-n-pin-2">
                         </select>
+                    </div>
+                    <div id="rgb-help-g" class="form-group hide">
+                        <small style="color: #bbb; display: block; margin-top: 10px;">
+                            Nota: Saída Vermelho, Verde e Azul pré-definida nos pinos GPIO 4, 5 e 12 (ESP8266) / 4, 5 e 18 (ESP32).
+                        </small>
                     </div>
                 </div>
             </div>

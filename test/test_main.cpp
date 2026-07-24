@@ -77,6 +77,46 @@ void test_modbus_telemetry_decoding(void) {
     TEST_ASSERT_EQUAL_UINT32(230500, decode_modbus_32bit(0x0003, 0x8464));
 }
 
+// Test potentiometer ADC-to-brightness scaling
+int map_adc_to_brightness(int reading, int maxVal) {
+    int newState = (reading * 100) / maxVal;
+    if (newState < 2) newState = 0;
+    if (newState > 98) newState = 100;
+    return newState;
+}
+
+void test_adc_to_brightness_mapping(void) {
+    // Standard ESP8266 ADC (max 1023)
+    TEST_ASSERT_EQUAL(50, map_adc_to_brightness(512, 1023));
+    TEST_ASSERT_EQUAL(0, map_adc_to_brightness(10, 1023)); // < 2% maps to 0%
+    TEST_ASSERT_EQUAL(100, map_adc_to_brightness(1015, 1023)); // > 98% maps to 100%
+    
+    // ESP32 ADC (max 4095)
+    TEST_ASSERT_EQUAL(50, map_adc_to_brightness(2048, 4095));
+}
+
+// Test Hysteresis dead-band filter logic
+bool is_outside_hysteresis_deadband(int current_reading, int last_reading, int tolerance) {
+    return abs(current_reading - last_reading) > tolerance;
+}
+
+void test_hysteresis_deadband(void) {
+    // Within tolerance (tolerance=20)
+    TEST_ASSERT_FALSE(is_outside_hysteresis_deadband(500, 510, 20));
+    // Outside tolerance
+    TEST_ASSERT_TRUE(is_outside_hysteresis_deadband(500, 525, 20));
+}
+
+// Test RGB color cycling index boundaries (7 primary colors)
+int cycle_rgb_color_index(int current_index) {
+    return (current_index + 1) % 7;
+}
+
+void test_rgb_color_cycling(void) {
+    TEST_ASSERT_EQUAL(1, cycle_rgb_color_index(0));
+    TEST_ASSERT_EQUAL(0, cycle_rgb_color_index(6)); // Wraps around
+}
+
 int main(int argc, char **argv) {
     UNITY_BEGIN();
     RUN_TEST(test_type_assertions);
@@ -85,6 +125,9 @@ int main(int argc, char **argv) {
     RUN_TEST(test_shutter_runtime_calculation);
     RUN_TEST(test_auto_off_expiration);
     RUN_TEST(test_modbus_telemetry_decoding);
+    RUN_TEST(test_adc_to_brightness_mapping);
+    RUN_TEST(test_hysteresis_deadband);
+    RUN_TEST(test_rgb_color_cycling);
     UNITY_END();
     return 0;
 }

@@ -209,6 +209,8 @@ namespace FeatureDrivers
     constexpr const char *LD2450{"LD2450"};
     constexpr const char *LD2460{"LD2460"};
     constexpr const char *TMF882X{"TMF882X"};
+    constexpr const char *RGB_LIGHT{"RGB_LIGHT"};
+    constexpr const char *ANALOG_DIMMER{"ANALOG_DIMMER"};
 
     constexpr const char *INVALID{"INVALID"};
 }

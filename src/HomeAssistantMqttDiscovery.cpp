@@ -59,11 +59,47 @@ void createHaSwitch(Actuator &sw)
   }
   else if (sw.isLight() || sw.isSwitch())
   {
-    object["stat_t"] = sw.readTopic;
-    object["pl_on"] = ActuatorState::ON_CLOSE;
-    object["pl_off"] = ActuatorState::OFF_OPEN;
     String family = sw.familyToText();
     family.toLowerCase();
+    
+    object["stat_t"] = sw.readTopic;
+    object["cmd_t"] = sw.writeTopic;
+    
+    if (sw.isRgb())
+    {
+      object["schema"] = "basic";
+      
+      String colorCommandTopic = String(sw.writeTopic);
+      colorCommandTopic.replace("/set", "/color/set");
+      object["rgb_cmd_t"] = colorCommandTopic;
+      
+      String colorStateTopic = String(sw.readTopic);
+      colorStateTopic.replace("/state", "/color/state");
+      object["rgb_stat_t"] = colorStateTopic;
+      
+      object["bri_cmd_t"] = sw.writeTopic;
+      object["bri_stat_t"] = sw.readTopic;
+      object["bri_scl"] = 100;
+      
+      object["state_val_tpl"] = "{{ \"OFF\" if value == \"0\" else \"ON\" }}";
+      object["bri_val_tpl"] = "{{ value }}";
+    }
+    else if (sw.isDimmer())
+    {
+      object["schema"] = "basic";
+      object["bri_cmd_t"] = sw.writeTopic;
+      object["bri_stat_t"] = sw.readTopic;
+      object["bri_scl"] = 100;
+      
+      object["state_val_tpl"] = "{{ \"OFF\" if value == \"0\" else \"ON\" }}";
+      object["bri_val_tpl"] = "{{ value }}";
+    }
+    else
+    {
+      object["pl_on"] = ActuatorState::ON_CLOSE;
+      object["pl_off"] = ActuatorState::OFF_OPEN;
+    }
+    
     serializeJson(object, objectStr);
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/" + family + "/" + uniqueId + "/config").c_str(), objectStr.c_str(), false);
   }

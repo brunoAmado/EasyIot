@@ -199,10 +199,61 @@ void prepareActuator(String name, unsigned int output, unsigned int input, Actua
     strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
     config.actuatores.push_back(actuator);
 }
-int prepareNewFeature(String name, unsigned int input1, unsigned int input2, int driverCode)
+int prepareNewFeature(JsonObject featureJson)
 {
+    int driverCode = featureJson["driver"] | 999;
+    String name = featureJson["name"] | "";
+    unsigned int input1 = featureJson["input1"] | DefaultPins::noGPIO;
+    unsigned int input2 = featureJson["input2"] | DefaultPins::noGPIO;
+
     if (driverCode < 60)
     {
+        if (driverCode == ActuatorDriver::RGB_LIGHT || driverCode == ActuatorDriver::ANALOG_DIMMER)
+        {
+            if (name.isEmpty()) return 1;
+            if (driverCode == ActuatorDriver::RGB_LIGHT)
+            {
+                Actuator actuator;
+                actuator.driver = (ActuatorDriver)driverCode;
+                if (config.validPin(input1)) actuator.inputs.push_back(input1);
+                JsonArray jsonOutputs = featureJson["outputs"];
+                for (auto out : jsonOutputs) {
+                    actuator.outputs.push_back(out.as<unsigned int>());
+                }
+                if (actuator.outputs.size() < 3) {
+                    actuator.outputs = { 4, 5, 12 };
+                }
+                strncpy(actuator.name, name.c_str(), sizeof(actuator.name));
+                actuator.typeControl = ActuatorControlType::GPIO_OUTPUT;
+                String idStr;
+                config.generateId(idStr, actuator.name, actuator.driver, input1, sizeof(actuator.uniqueId));
+                strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
+                actuator.setup();
+                config.actuatores.push_back(actuator);
+                return 0;
+            }
+            else // ANALOG_DIMMER
+            {
+                Actuator actuator;
+                actuator.driver = (ActuatorDriver)driverCode;
+                actuator.inputs.push_back(input1);
+                JsonArray jsonOutputs = featureJson["outputs"];
+                for (auto out : jsonOutputs) {
+                    actuator.outputs.push_back(out.as<unsigned int>());
+                }
+                if (actuator.outputs.empty()) {
+                    actuator.outputs.push_back(4);
+                }
+                strncpy(actuator.name, name.c_str(), sizeof(actuator.name));
+                actuator.typeControl = ActuatorControlType::GPIO_OUTPUT;
+                String idStr;
+                config.generateId(idStr, actuator.name, actuator.driver, input1, sizeof(actuator.uniqueId));
+                strlcpy(actuator.uniqueId, idStr.c_str(), sizeof(actuator.uniqueId));
+                actuator.setup();
+                config.actuatores.push_back(actuator);
+                return 0;
+            }
+        }
         return prepareVirtualSwitch(name, input1, input2, (ActuatorDriver)driverCode);
     }
     else

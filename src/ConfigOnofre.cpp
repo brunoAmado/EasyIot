@@ -270,6 +270,13 @@ ConfigOnofre &ConfigOnofre::load()
       actuator.downCourseTime = d["downCourseTime"] | constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
       actuator.state = d["state"] | 0;
       actuator.autoOff = d["autoOff"] | 0ul;
+      if (actuator.isRgb())
+      {
+        actuator.red = d["red"] | 255;
+        actuator.green = d["green"] | 255;
+        actuator.blue = d["blue"] | 255;
+        actuator.colorIndex = d["colorIndex"] | 0;
+      }
       String family = actuator.familyToText();
       family.toLowerCase();
       sprintf(actuator.readTopic, "onofre/%s/%s/%s/state", chipId, family.c_str(), actuator.uniqueId);
@@ -374,6 +381,13 @@ ConfigOnofre &ConfigOnofre::save()
     a["member"] = s.knxAddress[2];
     a["autoOff"] = s.autoOff;
     a["state"] = s.state;
+    if (s.isRgb())
+    {
+      a["red"] = s.red;
+      a["green"] = s.green;
+      a["blue"] = s.blue;
+      a["colorIndex"] = s.colorIndex;
+    }
     JsonArray outputs = a["outputs"].to<JsonArray>();
     for (auto out : s.outputs)
     {
@@ -446,15 +460,71 @@ ConfigOnofre &ConfigOnofre::reloadFeatures()
 }
 void ConfigOnofre::controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result)
 {
-  controlFeature(origin, action["id"] | "0", action["state"] | 0);
+  String id = action["id"] | "0";
+  int stateVal = action["state"] | -99;
+  for (auto &a : actuatores)
+  {
+    if (a.ready && id.equals(a.uniqueId))
+    {
+      if (action.containsKey("red")) a.red = action["red"] | 255;
+      if (action.containsKey("green")) a.green = action["green"] | 255;
+      if (action.containsKey("blue")) a.blue = action["blue"] | 255;
+      int stateToSet = stateVal;
+      if (stateToSet == -99) {
+        stateToSet = a.state;
+      }
+      if (stateToSet == ActuatorState::TOGGLE)
+      {
+        stateToSet = a.state > 0 ? ActuatorState::OFF_OPEN : ActuatorState::ON_CLOSE;
+      }
+      a.changeState(origin, stateToSet);
+      this->requestSave();
+      
+      JsonObject resObj = result.to<JsonObject>();
+      resObj["state"] = a.state;
+      resObj["red"] = a.red;
+      resObj["green"] = a.green;
+      resObj["blue"] = a.blue;
+      return;
+    }
+  }
 }
 void ConfigOnofre::controlFeature(StateOrigin origin, String topic, String payload)
 {
   for (auto &a : actuatores)
   {
+    if (a.isRgb() && topic.endsWith("/color/set"))
+    {
+      String baseTopic = String(a.writeTopic);
+      if (topic.startsWith(baseTopic.substring(0, baseTopic.length() - 4)))
+      {
+        int r, g, b;
+        if (sscanf(payload.c_str(), "%d,%d,%d", &r, &g, &b) == 3)
+        {
+          a.red = r;
+          a.green = g;
+          a.blue = b;
+          int newState = a.state;
+          if (newState == 0) {
+            newState = 100;
+          }
+          a.changeState(origin, newState);
+          this->requestSave();
+        }
+        return;
+      }
+    }
     if (strcmp(a.writeTopic, topic.c_str()) == 0 || strcmp(a.cloudIOwriteTopic, topic.c_str()) == 0)
     {
-      controlFeature(origin, a.uniqueId, payload.toInt());
+      int val = 0;
+      if (payload.equalsIgnoreCase("ON")) {
+        val = 100;
+      } else if (payload.equalsIgnoreCase("OFF")) {
+        val = 0;
+      } else {
+        val = payload.toInt();
+      }
+      controlFeature(origin, a.uniqueId, val);
       return;
     }
   }
@@ -805,6 +875,24 @@ void ConfigOnofre::loopActuators()
       if (sw.state == ActuatorState::ON_CLOSE && sw.lastChange > 0 && millis() - sw.lastChange > 1000)
       {
         sw.changeState(StateOrigin::AUTO, ActuatorState::OFF_OPEN);
+      }
+    }
+    if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.isAnalogDimmer() && sw.inputs.size() > 0)
+    {
+      int reading = analogRead(sw.inputs[0]);
+      int tolerance = 20; 
+      if (abs(reading - sw.lastAnalogReading) > tolerance)
+      {
+        sw.lastAnalogReading = reading;
+        int maxVal = 1023;
+#ifdef ESP32
+        maxVal = 4095;
+#endif
+        int newState = (reading * 100) / maxVal;
+        if (newState < 2) newState = 0;
+        if (newState > 98) newState = 100;
+        sw.changeState(StateOrigin::GPIO_INPUT, newState);
+        requestSave();
       }
     }
     if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.isCover())

@@ -28,6 +28,12 @@ function create() {
     s.driver = parseInt(getValue("f-n-driver", 999));
     s.input1 = parseInt(getValue("f-n-pin-1", 999));
     s.input2 = parseInt(getValue("f-n-pin-2", 999));
+    if (s.driver === 16) {
+        s.outputs = [ s.input2 ];
+        s.input2 = 999;
+    } else if (s.driver === 15) {
+        s.outputs = [ 4, 5, 12 ];
+    }
     fetch(baseUrl + "/features", {
         method: "POST",
         headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
@@ -230,7 +236,57 @@ function fillDevices() {
                 control.classList.add(f.state > 0 ? "ON" : "OFF");
                 a.light = true;
                 a.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/" + f.family + (f.state > 0 ? "_ON" : "") + ".svg";
-                a.getElementsByClassName("shutter-slider").item(0).classList.add("hide");
+                let isDimmer = f.driver === 11 || f.driver === 15 || f.driver === 16;
+                let slider = a.getElementsByClassName("shutter-slider").item(0);
+                if (isDimmer) {
+                    slider.classList.remove("hide");
+                    slider.value = f.state;
+                    slider.onclick = (e) => e.stopPropagation();
+                    slider.onchange = (event) => {
+                        const action = {
+                            id: f.id,
+                            state: parseInt(event.target.value)
+                        };
+                        fetch(baseUrl + "/actuators/control", {
+                            method: "POST",
+                            headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+                            body: JSON.stringify(action)
+                        }).catch(() => showMessage("control_state_error"));
+                    };
+                    if (f.driver === 15) {
+                        let picker = document.createElement("input");
+                        picker.type = "color";
+                        picker.style.width = "40px";
+                        picker.style.height = "30px";
+                        picker.style.border = "none";
+                        picker.style.borderRadius = "4px";
+                        picker.style.marginLeft = "10px";
+                        picker.style.cursor = "pointer";
+                        let r = f.red !== undefined ? f.red : 255;
+                        let g = f.green !== undefined ? f.green : 255;
+                        let b = f.blue !== undefined ? f.blue : 255;
+                        picker.value = "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+                        picker.onclick = (e) => e.stopPropagation();
+                        picker.onchange = (event) => {
+                            let hex = event.target.value;
+                            let rgb = hex.match(/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i);
+                            const action = {
+                                id: f.id,
+                                red: parseInt(rgb[1], 16),
+                                green: parseInt(rgb[2], 16),
+                                blue: parseInt(rgb[3], 16)
+                            };
+                            fetch(baseUrl + "/actuators/control", {
+                                method: "POST",
+                                headers: {'Content-Type': 'application/json', 'Accept': 'application/json'},
+                                body: JSON.stringify(action)
+                            }).catch(() => showMessage("control_state_error"));
+                        };
+                        a.getElementsByClassName("f-n-i").item(0).appendChild(picker);
+                    }
+                } else {
+                    slider.classList.add("hide");
+                }
             } else if ("SECURITY" === f.family) {
                 control.classList.add("OFF");
                 a.cover = true;
@@ -253,6 +309,9 @@ function fillDevices() {
                     box.classList.remove("OFF");
                     if (box.light) {
                         box.getElementsByClassName("feature-icon").item(0).src = "https://cloudio.bhonofre.pt/img/" + f.family + (s.data > 0 ? "_ON" : "") + ".svg";
+                    }
+                    if (box.getElementsByClassName("shutter-slider").item(0) !== null && !box.getElementsByClassName("shutter-slider").item(0).classList.contains("hide")) {
+                        box.getElementsByClassName("shutter-slider").item(0).value = s.data;
                     }
                     box.classList.add(s.data > 0 ? "ON" : "OFF");
                 }
@@ -558,10 +617,12 @@ function clearCreate(a) {
 
 function driverSelect(a) {
     let p2 = findById("f-n-pin-2-g");
+    let rgbHelp = findById("rgb-help-g");
     let p1l = findById("pin-up-l");
     let p2l = findById("pin-down-l");
     p1l.textContent = getI18n("pin_input")
     p2l.textContent = getI18n("pin_input")
+    rgbHelp.classList.add("hide");
     if (parseInt(a.value) === 4 || parseInt(a.value) === 5) {
         p2.classList.remove("hide");
         p1l.textContent = getI18n("pin_up")
@@ -574,6 +635,14 @@ function driverSelect(a) {
         p2.classList.remove("hide");
         p1l.textContent = getI18n("trigger")
         p2l.textContent = getI18n("echo")
+    } else if (parseInt(a.value) === 15) {
+        p2.classList.add("hide");
+        rgbHelp.classList.remove("hide");
+        p1l.textContent = 'Pino Botão Pulsador';
+    } else if (parseInt(a.value) === 16) {
+        p2.classList.remove("hide");
+        p1l.textContent = 'Pino Potenciómetro (A0)';
+        p2l.textContent = 'Pino Saída PWM';
     } else {
         p2.classList.add("hide");
     }

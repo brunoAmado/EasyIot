@@ -43,6 +43,8 @@ enum ActuatorDriver
     GARAGE_PUSH = 9,
     GARDEN_VALVE = 10,
     LIGHT_DIMMER = 11,
+    RGB_LIGHT = 15,
+    ANALOG_DIMMER = 16,
     INVALID = 999
 };
 
@@ -90,6 +92,11 @@ public:
     unsigned long downCourseTime = constantsConfig::SHUTTER_DEFAULT_COURSE_TIME_SECONS;
     bool dimmingUp = true;
     unsigned long lastDimTime = 0ul;
+    uint8_t red = 255;
+    uint8_t green = 255;
+    uint8_t blue = 255;
+    uint8_t colorIndex = 0;
+    int lastAnalogReading = -999;
 
     // METHODS
     constexpr bool isCover()
@@ -98,11 +105,19 @@ public:
     };
     constexpr bool isLight()
     {
-        return driver == LIGHT_PUSH || driver == LIGHT_LATCH || driver == LIGHT_DIMMER;
+        return driver == LIGHT_PUSH || driver == LIGHT_LATCH || driver == LIGHT_DIMMER || driver == RGB_LIGHT || driver == ANALOG_DIMMER;
     };
     constexpr bool isDimmer()
     {
-        return driver == LIGHT_DIMMER;
+        return driver == LIGHT_DIMMER || driver == RGB_LIGHT || driver == ANALOG_DIMMER;
+    };
+    constexpr bool isRgb()
+    {
+        return driver == RGB_LIGHT;
+    };
+    constexpr bool isAnalogDimmer()
+    {
+        return driver == ANALOG_DIMMER;
     };
 
     constexpr bool isVirtual()
@@ -171,6 +186,10 @@ public:
             return FeatureDrivers::LIGHT_LATCH;
         case LIGHT_DIMMER:
             return FeatureDrivers::LIGHT_DIMMER;
+        case RGB_LIGHT:
+            return FeatureDrivers::RGB_LIGHT;
+        case ANALOG_DIMMER:
+            return FeatureDrivers::ANALOG_DIMMER;
         case GARAGE_PUSH:
             return FeatureDrivers::GARAGE_PUSH;
         case GARDEN_VALVE:
@@ -189,6 +208,8 @@ public:
         case COVER_DUAL_PUSH:
         case GARAGE_PUSH:
         case LIGHT_DIMMER:
+        case RGB_LIGHT:
+        case ANALOG_DIMMER:
             return ActuatorInputMode::PUSH;
         case SWITCH_LATCH:
         case LIGHT_LATCH:
@@ -288,6 +309,18 @@ public:
         if (literal.equals("GARDEN_VALVE"))
         {
             return GARDEN_VALVE;
+        }
+        if (literal.equals("LIGHT_DIMMER"))
+        {
+            return LIGHT_DIMMER;
+        }
+        if (literal.equals("RGB_LIGHT"))
+        {
+            return RGB_LIGHT;
+        }
+        if (literal.equals("ANALOG_DIMMER"))
+        {
+            return ANALOG_DIMMER;
         }
         return INVALID;
     };

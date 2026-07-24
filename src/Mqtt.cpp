@@ -58,6 +58,12 @@ boolean reconnect()
                 continue;
             }
             subscribeOnMqtt(sw.writeTopic);
+            if (sw.isRgb())
+            {
+                String colorTopic = String(sw.writeTopic);
+                colorTopic.replace("/set", "/color/set");
+                subscribeOnMqtt(colorTopic.c_str());
+            }
             sw.notifyState(StateOrigin::MQTT);
         }
         initHomeAssistantDiscovery();

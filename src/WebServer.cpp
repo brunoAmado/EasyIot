@@ -321,7 +321,7 @@ void loadAPI()
     JsonVariant &root = response->getRoot();
     JsonObject featureJson = json.as<JsonObject>();
     config.pauseFeatures();
-    int result = prepareNewFeature(featureJson["name"] | "", featureJson["input1"] | DefaultPins::noGPIO, featureJson["input2"] | DefaultPins::noGPIO, featureJson["driver"] | 999);
+    int result = prepareNewFeature(featureJson);
     if (result == 0)
     {
       config.save().reloadFeatures().json(root,true);

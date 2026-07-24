@@ -139,6 +139,49 @@ void toogle(Button2 &btn)
     }
   }
 }
+void doubleClickRGB(Button2 &btn)
+{
+  for (auto &a : config.actuatores)
+  {
+    if (a.id == btn.getID())
+    {
+      if (a.isRgb())
+      {
+        a.colorIndex = (a.colorIndex + 1) % 7;
+        switch (a.colorIndex)
+        {
+          case 0: // White
+            a.red = 255; a.green = 255; a.blue = 255;
+            break;
+          case 1: // Red
+            a.red = 255; a.green = 0; a.blue = 0;
+            break;
+          case 2: // Green
+            a.red = 0; a.green = 255; a.blue = 0;
+            break;
+          case 3: // Blue
+            a.red = 0; a.green = 0; a.blue = 255;
+            break;
+          case 4: // Yellow
+            a.red = 255; a.green = 255; a.blue = 0;
+            break;
+          case 5: // Purple
+            a.red = 255; a.green = 0; a.blue = 255;
+            break;
+          case 6: // Cyan
+            a.red = 0; a.green = 255; a.blue = 255;
+            break;
+        }
+        int newState = a.state;
+        if (newState == 0) {
+          newState = 100;
+        }
+        a.changeState(StateOrigin::GPIO_INPUT, newState);
+        config.requestSave();
+      }
+    }
+  }
+}
 void openShutter(Button2 &btn)
 {
   for (auto a : config.actuatores)
@@ -239,19 +282,31 @@ void Actuator::setup()
         .onLevelReached(onShuttersLevelReached)
         .begin();
   }
-  for (auto output : outputs)
+  if (isRgb() && outputs.size() >= 3)
   {
-    configPIN(output, OUTPUT);
-    writeToPIN(output, 0);
-    if (isLight() || isSwitch() || isGardenValve())
+    configPIN(outputs[0], OUTPUT);
+    configPIN(outputs[1], OUTPUT);
+    configPIN(outputs[2], OUTPUT);
+    writePWMToPIN(outputs[0], (state * red) / 255);
+    writePWMToPIN(outputs[1], (state * green) / 255);
+    writePWMToPIN(outputs[2], (state * blue) / 255);
+  }
+  else
+  {
+    for (auto output : outputs)
     {
-      if (isDimmer())
+      configPIN(output, OUTPUT);
+      writeToPIN(output, 0);
+      if (isLight() || isSwitch() || isGardenValve())
       {
-        writePWMToPIN(output, state);
-      }
-      else
-      {
-        writeToPIN(output, state);
+        if (isDimmer())
+        {
+          writePWMToPIN(output, state);
+        }
+        else
+        {
+          writeToPIN(output, state);
+        }
       }
     }
   }
@@ -268,6 +323,10 @@ void Actuator::setup()
       case ActuatorDriver::SWITCH_PUSH:
       case ActuatorDriver::LIGHT_DIMMER:
         button.setPressedHandler(toogle);
+        break;
+      case ActuatorDriver::RGB_LIGHT:
+        button.setPressedHandler(toogle);
+        button.setDoubleClickHandler(doubleClickRGB);
         break;
       case ActuatorDriver::LIGHT_LATCH:
       case ActuatorDriver::SWITCH_LATCH:
@@ -357,6 +416,14 @@ void Actuator::notifyState(StateOrigin origin)
     if (isRelay() && mqttConnected())
     {
       publishOnMqtt(readTopic, stateStr.c_str(), true);
+      if (isRgb())
+      {
+        char colorStr[20];
+        sprintf(colorStr, "%d,%d,%d", red, green, blue);
+        String colorStateTopic = String(readTopic);
+        colorStateTopic.replace("/state", "/color/state");
+        publishOnMqtt(colorStateTopic.c_str(), colorStr, true);
+      }
     }
 
     // Notify by MQTT OnofreCloud
@@ -405,7 +472,13 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
     }
     else if ((isLight() || isSwitch() || isGardenValve()))
     {
-      if (isDimmer())
+      if (isRgb() && outputs.size() >= 3)
+      {
+        writePWMToPIN(outputs[0], (state * red) / 255);
+        writePWMToPIN(outputs[1], (state * green) / 255);
+        writePWMToPIN(outputs[2], (state * blue) / 255);
+      }
+      else if (isDimmer())
       {
         writePWMToPIN(outputs[0], state);
       }
