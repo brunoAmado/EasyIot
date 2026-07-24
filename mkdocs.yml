@@ -52,5 +52,6 @@ nav:
   - Getting Started:
     - How to Build and Configure: How_To_Build_And_Configure.md
   - User Guide: User_Guide.md
+  - Web Interface Guide: Web_Interface_Guide.md
   - Developer Guide: Developer_Guide.md
   - Troubleshooting & Recovery: Troubleshooting_And_Smoke_Tests.md
