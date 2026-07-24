@@ -51,16 +51,6 @@ nav:
   - Welcome: index.md
   - Getting Started:
     - How to Build and Configure: How_To_Build_And_Configure.md
-    - WiFi & Network Provisioning: Core_WiFi_BLE_Provisioning.md
-    - Captive Portal: Captive_Portal_Assets.md
-  - Hardware & Drivers:
-    - Predefined Hardware Profiles: Hardware_Configuration_Profiles.md
-    - Default GPIO Pinouts: Default_GPIO_Pins.md
-    - Actuators & Relays: Actuator.md
-    - Sensors & Presence Radars: Sensor.md
-    - HAN Portugal Smart Meter: HAN_Portugal_Smart_Meter_Integration.md
-  - Developer Core:
-    - Config Management (ConfigOnofre): ConfigOnofre.md
-    - Modbus Protocol: Modbus_Protocol_Master_Driver.md
-    - MQTT & HA Auto-Discovery: MQTT_Client_&_HA_Discovery.md
-    - Device Components: Device_Components_&_Core_Headers.md
+  - User Guide: User_Guide.md
+  - Developer Guide: Developer_Guide.md
+  - Troubleshooting & Recovery: Troubleshooting_And_Smoke_Tests.md
