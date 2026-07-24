@@ -113,7 +113,7 @@ void actuatoresCallback(message_t const &msg, void *arg)
         if (s.state != state)
         {
           s.changeState(StateOrigin::KNX, state);
-          config.save();
+          config.requestSave();
         }
         break;
       }
@@ -130,7 +130,7 @@ void toogle(Button2 &btn)
       if (a.isDimmer() && btn.wasPressedFor() > 500)
       {
         a.dimmingUp = !a.dimmingUp;
-        config.save();
+        config.requestSave();
       }
       else
       {

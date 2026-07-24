@@ -103,6 +103,7 @@ public:
   void controlFeature(StateOrigin origin, JsonObject &action, JsonVariant &result);
   void controlFeature(StateOrigin origin, String topic, String payload);
   void controlFeature(StateOrigin origin, String uniqueId, int state);
+  void requestSave();
 
 private:
   bool reboot = false;
@@ -112,4 +113,6 @@ private:
   bool cloudIOSync = false;
   bool wifiScan = false;
   bool pauseFeaturesLoop = false;
+  bool saveRequested = false;
+  unsigned long lastSaveRequestTime = 0;
 };
