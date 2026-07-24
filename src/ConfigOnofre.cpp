@@ -800,6 +800,13 @@ void ConfigOnofre::loopActuators()
     {
       sw.changeState(StateOrigin::AUTO, 0);
     }
+    if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.isGarage())
+    {
+      if (sw.state == ActuatorState::ON_CLOSE && sw.lastChange > 0 && millis() - sw.lastChange > 1000)
+      {
+        sw.changeState(StateOrigin::AUTO, ActuatorState::OFF_OPEN);
+      }
+    }
     if (sw.typeControl == ActuatorControlType::GPIO_OUTPUT && sw.isCover())
     {
       sw.shutter->loop();
