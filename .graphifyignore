@@ -1,0 +1,7 @@
+.git
+.idea
+.pio
+.venv
+graphify-out
+screenshots
+tools
