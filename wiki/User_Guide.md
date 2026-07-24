@@ -59,7 +59,7 @@ If you have a custom DIY board, you can add features dynamically via the web pan
 - **Sensors (driverCode >= 60)**: Add custom sensors:
   - **Reeds / Switches**: Door and window state sensors.
   - **Environmental**: DHT11/21/22 or DS18B20 temperature/humidity probes.
-  - **Presence Radars**: HLK-LD2410, LD2450, or LD2460 mmWave radar presence sensors.
+  - **Presence Radars**: HLK-LD2410, LD2450, or LD2460 mmWave radar presence sensors. For 2D tracking radars (like LD2450 and LD2460), individual target coordinates (X, Y position, and speed for up to 3/5 targets) are automatically exposed as numeric sensors in Home Assistant, enabling advanced automation based on zones and real-time positioning minimaps.
   - **Power Monitors**: PZEM-004T energy monitors.
 
 ---
