@@ -416,6 +416,15 @@ ConfigOnofre &ConfigOnofre::save()
   return *this;
 }
 
+void ConfigOnofre::requestSave()
+{
+  saveRequested = true;
+  lastSaveRequestTime = millis();
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Config save requested (deferred)." CR, tags::config);
+#endif
+}
+
 ConfigOnofre &ConfigOnofre::reloadFeatures()
 {
   for (auto &actuator : actuatores)
@@ -461,7 +470,7 @@ void ConfigOnofre::controlFeature(StateOrigin origin, String uniqueId, int state
         state = a.state > 0 ? ActuatorState::OFF_OPEN : ActuatorState::ON_CLOSE;
       }
       a.changeState(origin, state);
-      this->save();
+      this->requestSave();
       return;
     }
   }
@@ -780,6 +789,11 @@ bool ConfigOnofre::isReloadWifiRequested()
 }
 void ConfigOnofre::loopActuators()
 {
+  if (saveRequested && millis() - lastSaveRequestTime > 3000)
+  {
+    saveRequested = false;
+    save();
+  }
   for (auto &sw : actuatores)
   {
     if (sw.state == 100 && sw.autoOff > 0 && sw.lastChange > 0 && sw.lastChange + (sw.autoOff * 1000) < millis())
