@@ -1,30 +1,33 @@
-site_name: "EasyIot Codebase Wiki"
-site_description: "A knowledge graph-driven developer documentation and architecture wiki for EasyIot."
+site_name: "EasyIot Documentation"
+site_description: "Beautiful, developer-friendly documentation for the EasyIot ESP8266/ESP32 firmware."
 site_author: "Bruno Horta"
+repo_name: "brunoAmado/EasyIot"
+repo_url: "https://github.com/brunoAmado/EasyIot"
 
-docs_dir: "graphify-out/wiki"
-site_dir: "graphify-out/wiki_site"
+docs_dir: "wiki"
+site_dir: "site"
 
 theme:
   name: "material"
   palette:
     - media: "(prefers-color-scheme: dark)"
       scheme: "slate"
-      primary: "teal"
-      accent: "teal"
+      primary: "indigo"
+      accent: "indigo"
       toggle:
         icon: "material/weather-sunny"
         name: "Switch to light mode"
     - media: "(prefers-color-scheme: light)"
       scheme: "default"
-      primary: "teal"
-      accent: "teal"
+      primary: "indigo"
+      accent: "indigo"
       toggle:
         icon: "material/weather-night"
         name: "Switch to dark mode"
   features:
     - "navigation.tabs"
     - "navigation.top"
+    - "navigation.sections"
     - "search.suggest"
     - "search.highlight"
     - "content.code.copy"
@@ -43,3 +46,12 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.emoji
+
+nav:
+  - Welcome: index.md
+  - Getting Started:
+    - How to Build and Configure: How_To_Build_And_Configure.md
+  - User Guide: User_Guide.md
+  - Web Interface Guide: Web_Interface_Guide.md
+  - Developer Guide: Developer_Guide.md
+  - Troubleshooting & Recovery: Troubleshooting_And_Smoke_Tests.md
