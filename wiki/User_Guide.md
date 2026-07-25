@@ -54,8 +54,7 @@ EasyIot comes with preconfigured GPIO layouts for standard hardware. Go to **Set
 * **Garden Valves**: Configures multi-channel relay irrigation valves with built-in timeouts.
 
 ### B. Dynamic Custom Features (New Features)
-If you have a custom DIY board, you can add features dynamically via the web panel by specifying:
-- **Actuators (driverCode < 60)**: Add custom lights, toggle switches, or dimmers, selecting the exact output and input GPIO pins.
+- **Actuators (driverCode < 60)**: Add custom lights, toggle switches, dimmers, **RGB PWM lights** (with 3-PWM output channels and dynamic color indexing via double-click on a wall button), or **Analog Potentiometer dimmers** (using physical potentiometers mapped to an analog ADC input with integrated noise-filtering hysteresis).
 - **Sensors (driverCode >= 60)**: Add custom sensors:
   - **Reeds / Switches**: Door and window state sensors.
   - **Environmental**: DHT11/21/22 or DS18B20 temperature/humidity probes.

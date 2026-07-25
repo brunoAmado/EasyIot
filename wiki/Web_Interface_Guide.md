@@ -45,8 +45,9 @@ This is the main control dashboard where active features are displayed, edited, 
 
 ### A. Controlling Actuators & Viewing Telemetry
 * **Switches & Lights**: Toggle on/off directly from the dashboard.
-* **Dimmer Slider**: drag the horizontal range slider ($0-100\%$) to adjust brightness level.
-* **Roller Shutter Slider**: drag the slider ($0-100\%$) to position covers/blinds.
+* **Dimmer Slider**: Drag the horizontal range slider ($0-100\%$) to adjust brightness level.
+* **RGB Color Picker**: For RGB lights, a color wheel input allows you to choose any custom color directly from the web dashboard.
+* **Roller Shutter Slider**: Drag the slider ($0-100\%$) to position covers/blinds.
 * **HAN Portugal Smart Meter Widget**:
   - Live Imported vs Exported power (in Watts).
   - Contracted power (kVA) and active Tariff rate indicator (Vazio, Ponta, Cheias).
@@ -64,5 +65,7 @@ Each widget has an editing menu where you can:
 ### C. Adding a New Feature (Add Button `+`)
 Click the `+` button to open the Feature Wizard:
 1. **Name**: Define a name for the new feature.
-2. **Driver**: Choose from 18+ native hardware drivers (e.g. Switch, Cover, Dimmer, Garage door, DHT11/22 temperature probe, DS18B20 temperature, reed door sensor, motion PIR, HLK-LD2410 mmWave presence radar, or PZEM-004T energy monitor).
-3. **GPIO Pin Mapping**: Select physical input and output GPIO pins from dropdown lists containing only safe, validated pins for your board model.
+2. **Driver**: Choose from 20+ native hardware drivers:
+   - **Actuators**: Switch (Pulsador/Normal), Cover (Double Pulsador/Normal), Dimmer, Garage, **Iluminação RGB (3-PWM)**, **Regulador Analógico (Potenciómetro)**.
+   - **Sensors**: DHT11/21/22 or DS18B20 temperature probes, Reed door/window sensors, PIR motion sensor, HLK-LD2410 mmWave presence radar, or PZEM-004T energy monitors.
+3. **GPIO Pin Mapping**: Select physical input and output GPIO pins from dropdown lists containing only safe, validated pins for your board model. Note that for RGB lights, output pins are auto-mapped to default hardware layout (GPIO 4, 5, 12 on ESP8266 or 4, 5, 18 on ESP32), while for Analog Dimmer you specify both the Potentiometer Input (A0) and the PWM Output pin.
