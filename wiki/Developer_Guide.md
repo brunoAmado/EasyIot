@@ -70,7 +70,7 @@ The HAN module turns the device into a Modbus Master that queries electricity me
 To add a new custom sensor or actuator driver to the firmware, follow these steps:
 
 ### Step 1: Define Driver Code
-In [include/Constants.h](file:///c:/Users/bruno/CLionProjects/EasyIot/include/Constants.h), add a unique ID for your driver:
+In [include/Constants.h](https://github.com/brunoAmado/EasyIot/blob/master/include/Constants.h), add a unique ID for your driver:
 - Actuators should be added to `ActuatorDriver` (values `< 60`).
 - Sensors should be added to `SensorDriver` (values $\ge 60$).
 
