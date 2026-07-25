@@ -16,11 +16,11 @@ EasyIot is an open-source, lightweight, and highly customizable firmware for **E
 
 ## Documentation Structure
 
-* 🏁 **[Getting Started](How_To_Build_And_Configure.md)**: Setting up VS Code, PlatformIO compiler target overrides, provisioning workflows, and template selections.
-* 🔌 **[Hardware Profiles](User_Guide.md#a-predefined-hardware-profiles-templates)**: Overview of preconfigured hardware boards (OnOfre boards, PZEM boards).
-* 🎛️ **[Actuators & Relays](Developer_Guide.md#3-actuator-driver-subsystem)**: How switches, relays, cover blind calibrations, and hold-to-dim dimmers work.
-* 🌡️ **[Sensors & Radars](Developer_Guide.md#4-sensor-driver-subsystem)**: Pin configuration and reading intervals for temperature, magnetic reeds, PIRs, and presence radars.
-* 📖 **[Developer Reference](Developer_Guide.md)**: In-depth structural overview of classes like `ConfigOnofre`, MQTT clients, and Modbus drivers.
+* 🏁 **[Getting Started](How_To_Build_And_Configure)**: Setting up VS Code, PlatformIO compiler target overrides, provisioning workflows, and template selections.
+* 🔌 **[Hardware Profiles](User_Guide#a-predefined-hardware-profiles-templates)**: Overview of preconfigured hardware boards (OnOfre boards, PZEM boards).
+* 🎛️ **[Actuators & Relays](Developer_Guide#3-actuator-driver-subsystem)**: How switches, relays, cover blind calibrations, and hold-to-dim dimmers work.
+* 🌡️ **[Sensors & Radars](Developer_Guide#4-sensor-driver-subsystem)**: Pin configuration and reading intervals for temperature, magnetic reeds, PIRs, and presence radars.
+* 📖 **[Developer Reference](Developer_Guide)**: In-depth structural overview of classes like `ConfigOnofre`, MQTT clients, and Modbus drivers.
 
 ---
 
