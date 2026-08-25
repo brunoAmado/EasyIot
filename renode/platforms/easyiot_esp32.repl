@@ -1,17 +1,49 @@
-// EasyIot ESP32 Platform Peripheral & GPIO mapping for Renode
-// Mappable for valves, relays, LEDs and inputs
+// ==============================================================================
+// 🧠 EasyIot ESP32 Xtensa Dual-Core Machine Platform for Renode
+// Self-contained platform description (Xtensa CPU, RAM, ROM, Flash, GPIO & UART)
+// ==============================================================================
 
-gpio:
-    12 -> relay1@0
-    14 -> relay2@0
-    25 -> valve_ring_3@0
-    26 -> valve_ring_2@0
-    27 -> valve_ring_1@0
-    33 -> valve_ring_4@0
+// Instruction RAM
+iram0: Memory.MappedMemory @ sysbus 0x40000000
+    size: 0x80000
 
-relay1: Miscellaneous.LED @ gpio 12
-relay2: Miscellaneous.LED @ gpio 14
-valve_ring_1: Miscellaneous.LED @ gpio 27
-valve_ring_2: Miscellaneous.LED @ gpio 26
-valve_ring_3: Miscellaneous.LED @ gpio 25
-valve_ring_4: Miscellaneous.LED @ gpio 33
+// Instruction Flash Cache
+flash_inst: Memory.MappedMemory @ sysbus 0x400D0000
+    size: 0x400000
+
+// Data RAM
+dram0: Memory.MappedMemory @ sysbus 0x3FFE0000
+    size: 0x40000
+
+dram1: Memory.MappedMemory @ sysbus 0x3FF80000
+    size: 0x40000
+
+// Data Flash (Read-Only Data)
+flash_rodata: Memory.MappedMemory @ sysbus 0x3F400000
+    size: 0x400000
+
+// Boot ROM
+rom: Memory.MappedMemory @ sysbus 0x50000000
+    size: 0x4000000
+
+// Main RAM
+ram: Memory.MappedMemory @ sysbus 0x60000000
+    size: 0x8000000
+
+// Xtensa Core
+cpu: CPU.Xtensa @ sysbus
+    cpuType: "sample_controller"
+    frequency: 240000000
+
+// Semihosting & Serial Monitor
+uartSemihosting: UART.SemihostingUart @ cpu
+
+// ==============================================================================
+// ⛲ EasyIot GPIO Peripheral Mappings (Relays, Fontaine Valves, LEDs)
+// ==============================================================================
+relay1: Miscellaneous.LED @ sysbus 0x3FF44000
+relay2: Miscellaneous.LED @ sysbus 0x3FF44004
+valve_ring_1: Miscellaneous.LED @ sysbus 0x3FF44008
+valve_ring_2: Miscellaneous.LED @ sysbus 0x3FF4400C
+valve_ring_3: Miscellaneous.LED @ sysbus 0x3FF44010
+valve_ring_4: Miscellaneous.LED @ sysbus 0x3FF44014

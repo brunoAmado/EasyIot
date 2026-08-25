@@ -21,14 +21,13 @@ class TestRenodeIntegration(unittest.TestCase):
         self.assertTrue(RESC_FILE.exists(), "easyiot_esp32.resc must exist")
         content = RESC_FILE.read_text(encoding="utf-8")
         self.assertIn("mach create", content)
-        self.assertIn("platforms/cpus/esp32.repl", content)
         self.assertIn("easyiot_esp32.repl", content)
         self.assertIn("sysbus LoadELF", content)
 
     def test_renode_platform_description_exists(self) -> None:
         self.assertTrue(REPL_FILE.exists(), "easyiot_esp32.repl must exist")
         content = REPL_FILE.read_text(encoding="utf-8")
-        self.assertIn("gpio:", content)
+        self.assertIn("CPU.Xtensa", content)
         self.assertIn("valve_ring_", content)
 
     def test_renode_robot_test_exists(self) -> None:

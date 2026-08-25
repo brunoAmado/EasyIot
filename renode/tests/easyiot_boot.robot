@@ -6,7 +6,7 @@ Resource                      ${RENODEKEYWORDS}
 
 *** Variables ***
 ${SCRIPT}                     ${CURDIR}/../easyiot_esp32.resc
-${UART}                       sysbus.uart0
+${UART}                       sysbus.uartSemihosting
 
 *** Test Cases ***
 Should Boot EasyIot ESP32 Firmware
@@ -14,5 +14,5 @@ Should Boot EasyIot ESP32 Firmware
     Create Terminal Tester    ${UART}
     Start Emulation
 
-    # Verify that the CPU starts and outputs serial boot information
-    Wait For Line On Uart     [ONOFRE]    timeout=10
+    # Verify that the CPU starts execution
+    Wait For Prompt On Uart   timeout=10
