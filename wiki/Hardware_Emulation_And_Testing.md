@@ -13,6 +13,27 @@ O EasyIot suporta **emulação real de hardware** e **simulação interativa de 
 * **[`renode/easyiot_esp32.resc`](file:///c:/Users/bruno/CLionProjects/EasyIot/renode/easyiot_esp32.resc):** Script de execução que cria a máquina virtual ESP32, carrega o binário PlatformIO `.pio/build/ESP32_DEBUG/firmware.elf` e abre a consola de monitorização série.
 * **[`renode/tests/easyiot_boot.robot`](file:///c:/Users/bruno/CLionProjects/EasyIot/renode/tests/easyiot_boot.robot):** Teste automatizado em Robot Framework para validação contínua em CI/CD.
 
+### Instalação Automática do Renode:
+O EasyIot inclui scripts de instalação automatizada para todas as plataformas:
+
+* **Windows (PowerShell):**
+  ```powershell
+  .\install_renode.ps1
+  # Ou via winget diretamente:
+  winget install Renode.Renode
+  ```
+* **Linux (Ubuntu / Debian / Fedora / Arch):**
+  ```bash
+  chmod +x install_renode.sh
+  ./install_renode.sh
+  ```
+* **macOS (Homebrew):**
+  ```bash
+  ./install_renode.sh
+  # Ou via brew diretamente:
+  brew install --cask renode
+  ```
+
 ### Como Executar Localmente:
 ```powershell
 # Compilar e iniciar no emulador Renode com consola série interativa
