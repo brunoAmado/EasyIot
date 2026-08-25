@@ -39,11 +39,11 @@ cpu: CPU.Xtensa @ sysbus
 uartSemihosting: UART.SemihostingUart @ cpu
 
 // ==============================================================================
-// ⛲ EasyIot GPIO Peripheral Mappings (Relays, Fontaine Valves, LEDs)
+// ⛲ EasyIot Peripherals (Relays, Fontaine Valves, LEDs)
 // ==============================================================================
-relay1: Miscellaneous.LED @ sysbus 0x3FF44000
-relay2: Miscellaneous.LED @ sysbus 0x3FF44004
-valve_ring_1: Miscellaneous.LED @ sysbus 0x3FF44008
-valve_ring_2: Miscellaneous.LED @ sysbus 0x3FF4400C
-valve_ring_3: Miscellaneous.LED @ sysbus 0x3FF44010
-valve_ring_4: Miscellaneous.LED @ sysbus 0x3FF44014
+relay1: Miscellaneous.LED
+relay2: Miscellaneous.LED
+valve_ring_1: Miscellaneous.LED
+valve_ring_2: Miscellaneous.LED
+valve_ring_3: Miscellaneous.LED
+valve_ring_4: Miscellaneous.LED
