@@ -27,3 +27,6 @@ RELEASE_NOTES_DRAFT.md
 src/idf_component.yml
 src/idf_component.yml.orig
 /firmware_bins/
+.idea/
+.agents/
+site/
