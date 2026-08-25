@@ -35,3 +35,4 @@ src/idf_component.yml.orig
 .idea/**/shelf.xml
 .agents/
 site/
+.ai/
