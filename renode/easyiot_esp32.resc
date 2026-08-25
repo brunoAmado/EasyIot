@@ -25,7 +25,9 @@ macro reset
     cpu SetRegister "A1" 0x3FFE3E20
     cpu SetRegister "WINDOWBASE" 0
     cpu SetRegister "WINDOWSTART" 1
-    cpu SetRegister "CPENABLE" 0
+
+    # Bypass unimplemented F64 coprocessor register probe in Xtensa HAL
+    cpu AddHook 0x40097085 "cpu.PC = 0x40097088"
 """
 
 runMacro $reset
