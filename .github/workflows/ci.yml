@@ -54,3 +54,10 @@ jobs:
 
     - name: Run PlatformIO Unit Tests
       run: pio test -e native
+
+    - name: Run Renode Hardware Emulation Tests
+      uses: antmicro/renode-test-action@v1
+      if: always()
+      with:
+        renode-version: 'latest'
+        tests-to-run: 'renode/tests/easyiot_boot.robot'

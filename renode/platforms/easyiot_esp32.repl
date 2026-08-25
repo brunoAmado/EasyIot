@@ -1,0 +1,17 @@
+// EasyIot ESP32 Platform Peripheral & GPIO mapping for Renode
+// Mappable for valves, relays, LEDs and inputs
+
+gpio:
+    12 -> relay1@0
+    14 -> relay2@0
+    25 -> valve_ring_3@0
+    26 -> valve_ring_2@0
+    27 -> valve_ring_1@0
+    33 -> valve_ring_4@0
+
+relay1: Miscellaneous.LED @ gpio 12
+relay2: Miscellaneous.LED @ gpio 14
+valve_ring_1: Miscellaneous.LED @ gpio 27
+valve_ring_2: Miscellaneous.LED @ gpio 26
+valve_ring_3: Miscellaneous.LED @ gpio 25
+valve_ring_4: Miscellaneous.LED @ gpio 33

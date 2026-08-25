@@ -1,0 +1,31 @@
+# Renode Emulation Script for EasyIot ESP32 Firmware
+# Runs actual compiled PlatformIO ELF binary in Renode emulator
+
+using sysbus
+
+$name?="EasyIot-ESP32"
+mach create $name
+
+# Load base ESP32 Xtensa dual-core architecture description
+machine LoadPlatformDescription @platforms/cpus/esp32.repl
+
+# Load EasyIot board peripherals & GPIO mappings
+machine LoadPlatformDescription @renode/platforms/easyiot_esp32.repl
+
+# Path to firmware ELF compiled by PlatformIO
+$bin?=@.pio/build/ESP32_DEBUG/firmware.elf
+
+# Open virtual UART serial terminal
+showAnalyzer uart0
+
+macro reset
+"""
+    sysbus LoadELF $bin
+"""
+
+runMacro reset
+
+echo "---------------------------------------------------------"
+echo "EasyIot ESP32 Hardware Emulation Ready!"
+echo "Type 'start' to begin CPU execution, or 'quit' to exit."
+echo "---------------------------------------------------------"
