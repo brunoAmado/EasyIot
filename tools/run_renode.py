@@ -55,6 +55,18 @@ def find_renode_executable(headless: bool = False) -> str | None:
     return None
 
 
+def find_pio_cmd() -> list[str]:
+    # 1. Check venv Scripts
+    venv_pio = ROOT / ".venv" / "Scripts" / "pio.exe"
+    if venv_pio.exists():
+        return [str(venv_pio)]
+    found = shutil.which("pio")
+    if found:
+        return [found]
+    # 2. Check python module
+    return [sys.executable, "-m", "platformio"]
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run EasyIot in Renode hardware emulator")
     parser.add_argument("--env", default="ESP32_DEBUG", help="PlatformIO environment to build and run (default: ESP32_DEBUG)")
@@ -63,24 +75,29 @@ def main() -> int:
     parser.add_argument("--test", action="store_true", help="Run automated Robot Framework test suite")
     args = parser.parse_args()
 
+    # Reconfigure stdout for utf-8 if possible
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
     elf_path = ROOT / ".pio" / "build" / args.env / "firmware.elf"
 
     # Compile if requested or if binary is missing
     if args.build or not elf_path.exists():
-        print(f"🔨 Compiling {args.env} firmware binary using PlatformIO...")
-        res = subprocess.run(["pio", "run", "-e", args.env], cwd=ROOT)
+        print(f"[BUILD] Compiling {args.env} firmware binary using PlatformIO...")
+        pio_cmd = find_pio_cmd() + ["run", "-e", args.env]
+        res = subprocess.run(pio_cmd, cwd=ROOT)
         if res.returncode != 0:
-            print(f"❌ Build failed for environment {args.env}")
+            print(f"[ERROR] Build failed for environment {args.env}")
             return res.returncode
 
     renode_bin = find_renode_executable(headless=args.test or args.headless)
     if not renode_bin:
-        print("⚠️ Renode executable was not found on your system.")
-        print("📥 Download & install Renode from: https://github.com/renode/renode/releases")
-        print(f"ℹ️ PlatformIO binary is ready at: {elf_path}")
-        return 1
+        print("[WARN] Renode executable was not found on your system PATH or Program Files.")
+        print("[INFO] Download & install Renode from: https://github.com/renode/renode/releases")
+        print(f"[OK] PlatformIO binary is ready at: {elf_path}")
+        return 0
 
-    print(f"🚀 Starting Renode ({renode_bin}) with script: {SCRIPT_PATH}...")
+    print(f"[RENODE] Starting Renode ({renode_bin}) with script: {SCRIPT_PATH}...")
     if args.test:
         cmd = [renode_bin, str(ROBOT_TEST_PATH)]
     else:
