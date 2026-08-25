@@ -16,8 +16,9 @@ graphify-out/
 .graphifyignore
 
 /run_graphify.ps1
-/run_graphify_update.ps1
 /.env
+.env
+.env.*
 CLAUDE.md
 GEMINI.md
 
