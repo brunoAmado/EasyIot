@@ -3,23 +3,28 @@
 // Self-contained platform description (Xtensa CPU, RAM, ROM, Flash, GPIO & UART)
 // ==============================================================================
 
-// Instruction RAM
+// Data RAM (DRAM - Internal SRAM 1 & 2)
+// 0x3FFB0000 - 0x3FFDFFFF (192 KB)
+dram1: Memory.MappedMemory @ sysbus 0x3FFB0000
+    size: 0x30000
+
+// 0x3FFE0000 - 0x3FFFFFFF (128 KB)
+dram0: Memory.MappedMemory @ sysbus 0x3FFE0000
+    size: 0x20000
+
+// Data Flash (Read-Only Data Cache)
+// 0x3F400000 - 0x3F7FFFFF (4 MB)
+flash_rodata: Memory.MappedMemory @ sysbus 0x3F400000
+    size: 0x400000
+
+// Instruction RAM (IRAM - Internal SRAM 0)
+// 0x40000000 - 0x4007FFFF (512 KB)
 iram0: Memory.MappedMemory @ sysbus 0x40000000
     size: 0x80000
 
-// Instruction Flash Cache
+// Instruction Flash (MMU Mapped Application Flash)
+// 0x400D0000 - 0x404CFFFF (4 MB)
 flash_inst: Memory.MappedMemory @ sysbus 0x400D0000
-    size: 0x400000
-
-// Data RAM
-dram0: Memory.MappedMemory @ sysbus 0x3FFE0000
-    size: 0x40000
-
-dram1: Memory.MappedMemory @ sysbus 0x3FF80000
-    size: 0x40000
-
-// Data Flash (Read-Only Data)
-flash_rodata: Memory.MappedMemory @ sysbus 0x3F400000
     size: 0x400000
 
 // Boot ROM
