@@ -6,7 +6,7 @@ Resource                      ${RENODEKEYWORDS}
 
 *** Variables ***
 ${SCRIPT}                     ${CURDIR}/../easyiot_esp32.resc
-${UART}                       sysbus.uartSemihosting
+${UART}                       cpu.uartSemihosting
 
 *** Test Cases ***
 Should Boot EasyIot ESP32 Firmware
