@@ -3,27 +3,19 @@
 // Self-contained platform description (Xtensa CPU, RAM, ROM, Flash, GPIO & UART)
 // ==============================================================================
 
-// Data Memory & Internal SRAM (0x3FF00000 - 0x3FFFFFFF, 1 MB)
-dram_full: Memory.MappedMemory @ sysbus 0x3FF00000
-    size: 0x100000
+// Full ESP32 Data, Heap, Stack & MMIO Memory Space (0x00000000 - 0x3FFFFFFF, 1 GB)
+data_space: Memory.MappedMemory @ sysbus 0x00000000
+    size: 0x40000000
 
-// Data Flash (Read-Only Data Cache, 0x3F400000 - 0x3F7FFFFF, 4 MB)
-flash_rodata: Memory.MappedMemory @ sysbus 0x3F400000
-    size: 0x400000
+// Full ESP32 Instruction Memory Space (IRAM, Cache & MMU Flash: 0x40000000 - 0x40FFFFFF, 16 MB)
+inst_space: Memory.MappedMemory @ sysbus 0x40000000
+    size: 0x1000000
 
-// Instruction RAM (IRAM & Vector Memory, 0x40000000 - 0x400FFFFF, 1 MB)
-iram_full: Memory.MappedMemory @ sysbus 0x40000000
-    size: 0x100000
-
-// Instruction Flash (MMU Mapped Application Flash, 0x400D0000 - 0x404CFFFF, 4 MB)
-flash_inst: Memory.MappedMemory @ sysbus 0x400D0000
-    size: 0x400000
-
-// Boot ROM
+// Boot ROM (0x50000000 - 0x53FFFFFF, 64 MB)
 rom: Memory.MappedMemory @ sysbus 0x50000000
     size: 0x4000000
 
-// Main RAM
+// Main External RAM (0x60000000 - 0x67FFFFFF, 128 MB)
 ram: Memory.MappedMemory @ sysbus 0x60000000
     size: 0x8000000
 

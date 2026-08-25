@@ -25,6 +25,7 @@ macro reset
     cpu SetRegister "A1" 0x3FFE3E20
     cpu SetRegister "WINDOWBASE" 0
     cpu SetRegister "WINDOWSTART" 1
+    cpu SetRegister "CPENABLE" 0
 """
 
 runMacro $reset
