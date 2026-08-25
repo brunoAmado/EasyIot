@@ -22,7 +22,7 @@ macro reset
     sysbus LoadELF $bin
 """
 
-runMacro reset
+runMacro $reset
 
 echo "========================================================="
 echo "⛲ EasyIot ESP32 Hardware Emulation Loaded Successfully!"
