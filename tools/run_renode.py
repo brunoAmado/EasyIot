@@ -126,8 +126,15 @@ def main() -> int:
     else:
         cmd = [renode_bin, "--plain", "-e", f"$bin=@{elf_posix}", str(SCRIPT_PATH)]
 
-    return subprocess.run(cmd, cwd=ROOT).returncode
+    try:
+        return subprocess.run(cmd, cwd=ROOT).returncode
+    except KeyboardInterrupt:
+        print("\n[RENODE] Emulation stopped by user.")
+        return 0
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    try:
+        sys.exit(main())
+    except KeyboardInterrupt:
+        sys.exit(0)
