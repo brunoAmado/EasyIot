@@ -1,4 +1,7 @@
+#include "DeviceLog.h"
 #include "Mqtt.h"
+#include "Irrigation.h"
+#include "CloudIO.h"
 #include "ConfigOnofre.h"
 #include <PubSubClient.h>
 #include "Actuatores.h"
@@ -15,16 +18,35 @@ void callbackMqtt(char *topic, byte *payload, unsigned int length)
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Message received" CR, tags::mqtt);
 #endif
+    // Under a fragmented heap this allocation can fail, and writing to the null it
+    // returns took the device down with it. Drop the message instead of rebooting.
     char *payload_as_string = (char *)malloc(length + 1);
+    if (payload_as_string == nullptr)
+    {
+#ifdef DEBUG_ONOFRE
+        Log.error("%s Out of memory for a %d byte payload; message dropped" CR, tags::mqtt, length);
+#endif
+        return;
+    }
     memcpy(payload_as_string, (char *)payload, length);
     payload_as_string[length] = 0;
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Topic: %s" CR, tags::mqtt, topic);
     Log.notice("%s Payload: %s" CR, tags::mqtt, payload_as_string);
 #endif
+    // PubSubClient invokes this callback synchronously from mqttClient.loop().
+    // loopMqtt() owns the non-reentrant feature/config lease for the complete
+    // client operation, so this callback must not acquire it again.
     if (homeAssistantOnline(topic, payload_as_string))
     {
         initHomeAssistantDiscovery();
+    }
+    else if (strcmp(topic, config.irrigationWriteTopic) == 0)
+    {
+        // A Home Assistant button or number lands here. Republish either way: a
+        // refused payload still leaves the entities showing the truth.
+        irrigation.command(payload_as_string);
+        notifyIrrigation();
     }
     else
     {
@@ -51,6 +73,9 @@ boolean reconnect()
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/status").c_str());
         subscribeOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefixLegacy) + "/status").c_str());
         sendToServerEvents("mqtt_health", constantsMqtt::availablePayload);
+        deviceLog("mqtt ligado a %s", config.mqttIpDns);
+        // reconnect() is reached only from loopMqtt(), which already owns the
+        // lease. Keep the complete subscription scan in that same snapshot.
         for (auto &sw : config.actuatores)
         {
             if (sw.isVirtual())
@@ -60,6 +85,8 @@ boolean reconnect()
             subscribeOnMqtt(sw.writeTopic);
             sw.notifyState(StateOrigin::MQTT);
         }
+        // Where the Home Assistant buttons and the zone-count number send to.
+        subscribeOnMqtt(config.irrigationWriteTopic);
         initHomeAssistantDiscovery();
     }
 
@@ -84,10 +111,26 @@ void setupMQTT(bool forceDisconnect)
     mqttClient.setCallback(callbackMqtt);
 }
 
+void disconnectMqttForUpdate()
+{
+    if (mqttConnected())
+    {
+        mqttClient.disconnect();
+    }
+}
+
 void loopMqtt()
 {
-    if (!wifiConnected() || strlen(config.mqttIpDns) == 0)
+    // PubSubClient is synchronous: connect(), loop(), callback dispatch, state
+    // publication, and configuration changes must never use the client or its
+    // backing config strings concurrently from another task.
+    if (!config.tryBeginFeatureAccess())
         return;
+    if (!wifiConnected() || strlen(config.mqttIpDns) == 0)
+    {
+        config.endFeatureAccess();
+        return;
+    }
     static unsigned long lastReconnectAttempt = millis();
     if (!mqttConnected())
     {
@@ -108,6 +151,7 @@ void loopMqtt()
     {
         mqttClient.loop();
     }
+    config.endFeatureAccess();
 }
 
 void publishOnMqtt(const char *topic, const char *payload, bool retain)

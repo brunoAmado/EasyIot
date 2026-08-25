@@ -99,8 +99,13 @@ def run_release_validation(source, target, env):
     return 0
 
 
-# Run before firmware link/build output is generated.
-env.AddPreAction("$PROGPATH", Action(run_html_converter, "Pre-build: HTML convert"))
+# The web panel is embedded as generated headers, so it has to be rebuilt before
+# the compiler reads them. A PreAction on $PROGPATH is not enough: when only
+# webpanel/ changed there is nothing to recompile, SCons skips the link, and the
+# action never fires — the build then reports SUCCESS while embedding the
+# previous panel. Regenerating at script-load time runs on every invocation.
+run_html_converter(None, None, env)
+
 env.AddPreAction("$PROGPATH", Action(run_release_validation, "Pre-build: release validation"))
 
 # Firmware naming
@@ -115,5 +120,9 @@ for define in my_flags.get("CPPDEFINES", []):
 
 timestamp = datetime.datetime.now().strftime("%d.%m.%Y")
 print("")
-env.Replace(PROGNAME=f"Firmware_{env['PIOENV']}_{version} - {timestamp}")
+# No spaces or a bare " - " in the artefact name: esptool 5.x (used by the
+# Arduino 3.x / IDF 5.x platforms) parses its CLI with click, which reads the
+# lone dash as an option and fails with "Path '-' does not exist". The older
+# argparse-based esptool 4.x tolerated it.
+env.Replace(PROGNAME=f"Firmware_{env['PIOENV']}_{version}_{timestamp}")
 print("")

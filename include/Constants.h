@@ -57,6 +57,17 @@ namespace tags
 namespace configFilenames
 {
     constexpr const char *config = "/config.json";
+    constexpr const char *configTemporary = "/config.tmp";
+    /* Irrigation programs live in their own file, not in config.json: an update
+       must never be able to lose a working configuration because it failed to
+       parse a key it did not know about. A device coming from v9 simply has no
+       such file and starts with no programs. */
+    constexpr const char *irrigation = "/irrigation.json";
+    constexpr const char *irrigationTemporary = "/irrigation.tmp";
+    constexpr const char *configRollback = "/config.rollback";
+    constexpr const char *irrigationRollback = "/irrigation.rollback";
+    constexpr const char *restore = "/restore.json";
+    constexpr const char *restoreTemporary = "/restore.tmp";
 }
 
 namespace constantsConfig
@@ -77,7 +88,7 @@ namespace constantsConfig
     constexpr const char *PW_HIDE{"******"};
     constexpr unsigned long DEFAULT_TIME_SENSOR_ERROR_CLEAR{60000};
 }
-#ifdef ESP32
+#if defined(ESP32) && !defined(ESP32C6)
 namespace DefaultPins
 {
     // ESP32 DEFAULT PINS
@@ -94,12 +105,44 @@ namespace DefaultPins
     constexpr int HAN_RX{14u};
     constexpr unsigned int OUTPUT_VALVE_THREE{noGPIO};
     constexpr unsigned int OUTPUT_VALVE_FOUR{noGPIO};
-#ifdef ESP32_MAKER_4MB
-    constexpr unsigned int outputInputPins[] = {7, 12, 13, 14, 19, 20, 21, 22, 25};
-#else
     constexpr unsigned int outputInputPins[] = {4,5,7, 8, 12, 13, 14, 19, 20, 21, 22, 25, 26, 27};
-#endif
     constexpr unsigned int intputOnlyPins[] = {34, 35, 36, 37, 38};
+}
+#endif
+#ifdef ESP32C6
+namespace DefaultPins
+{
+    // ESP32-C6-DevKitC-1, wired for irrigation: five valves, one button each and
+    // a rain sensor. Pins mirror the board that already runs this job, so a unit
+    // can be reflashed from the ESPHome build without rewiring.
+    //   valves  GPIO 4, 5, 2, 10, 11
+    //   buttons GPIO 18, 19, 20, 21, 22   (input, pull-up, active low)
+    //   rain    GPIO 3                    (input, pull-up, active low)
+    // Reserved on this module: 12/13 (USB-JTAG), 16/17 (UART0), 24-30 (flash),
+    // 8/9/15 (strapping). RISC-V parts have no input-only pins.
+    constexpr unsigned int noGPIO{999u};
+    constexpr unsigned int OUTPUT_ONE{4u};
+    constexpr unsigned int OUTPUT_TWO{5u};
+    constexpr unsigned int OUTPUT_VALVE_THREE{2u};
+    constexpr unsigned int OUTPUT_VALVE_FOUR{10u};
+    constexpr unsigned int OUTPUT_VALVE_FIVE{11u};
+    constexpr unsigned int INPUT_ONE{18u};
+    constexpr unsigned int INPUT_TWO{19u};
+    constexpr unsigned int INPUT_THREE{20u};
+    constexpr unsigned int INPUT_FOUR{21u};
+    constexpr unsigned int INPUT_FIVE{22u};
+    constexpr unsigned int RAIN_SENSOR{3u};
+    // Unused here, but referenced by ESP32-wide code paths.
+    constexpr unsigned int PZEM_TX{6u};
+    constexpr unsigned int PZEM_RX{7u};
+    constexpr int SDA{6u};
+    constexpr int SCL{7u};
+    constexpr int HAN_TX{6u};
+    constexpr int HAN_RX{7u};
+    // GPIO6/7 are the fixed Smart Bus I2C pins above. Exposing either one as a
+    // configurable feature pin lets Wire take ownership after actuator setup,
+    // leaving a persisted relay mapped to a pin that is no longer GPIO output.
+    constexpr unsigned int outputInputPins[] = {0, 1, 2, 3, 4, 5, 10, 11, 18, 19, 20, 21, 22, 23};
 }
 #endif
 #ifdef ESP8266
@@ -126,11 +169,36 @@ namespace constanstsCloudIO
 {
     constexpr const char *mqttDns{"mqtt.bhonofre.pt"};
     constexpr int mqttPort{1883};
+#ifdef ESP8266
+    // cloudio.bhonofre.pt negotiates RFC 6066 maximum fragment length. The
+    // BearSSL default 16 KB receive buffer cannot coexist with the running
+    // WebUI/MQTT heap on an ESP8266. Cloud sync can run during a memory-heavy
+    // startup, so it uses the smallest negotiated fragment. OTA also uses that
+    // fragment size now that v9.198's runtime state leaves less handshake heap.
+    constexpr int cloudTlsReceiveBufferSize{512};
+    constexpr int otaTlsReceiveBufferSize{512};
+    constexpr int tlsTransmitBufferSize{512};
+    // Cloud sync runs with the WebUI and other services alive. HTTPClient also
+    // allocates request/header storage after the TLS connection is established,
+    // so its gate needs substantially more reserve than the OTA path. If this
+    // reserve is unavailable, CloudIO uses its existing plain-HTTP fallback.
+    constexpr uint32_t cloudTlsMinimumFreeHeap{22000};
+    constexpr uint32_t cloudTlsMinimumMaxBlock{12000};
+    // v9.198 reproduced a BearSSL allocation failure at 12,960 bytes free with
+    // a 9,912-byte largest block. Never enter TLS near that measured cliff:
+    // close browser/MQTT transports first, then require useful reserve for both
+    // the handshake and the updater's request/header allocations.
+    constexpr uint32_t otaTlsMinimumFreeHeap{15000};
+    constexpr uint32_t otaTlsMinimumMaxBlock{11000};
+#endif
     constexpr const char *configUrl{"https://cloudio.bhonofre.pt/devices/config"};
 #ifdef HAN_MODE
     constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP8266-HAN"};
-#elif ESP32_MAKER_4MB
-    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-MAKER-4MB"};
+#elif defined(ESP32C6)
+    // The variant is not cosmetic here: the C6 asks over the same x-ESP32-version
+    // header as an 8 MB ESP32, so without it the cloud would hand this board an
+    // image for a different chip.
+    constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest?variant=ESP32-C6"};
 #else
     constexpr const char *otaUrl{"https://cloudio.bhonofre.pt/firmware/update/latest"};
 #endif
@@ -167,6 +235,8 @@ namespace I18N
     constexpr const char *VALVE_TWO{"Válvula 2"};
     constexpr const char *VALVE_THREE{"Válvula 3"};
     constexpr const char *VALVE_FOUR{"Válvula 4"};
+    constexpr const char *VALVE_FIVE{"Válvula 5"};
+    constexpr const char *RAIN_SENSOR_NAME{"Chuva"};
     constexpr const char *GARAGE{"Garagem"};
     constexpr const char *COVER{"Estore"};
     constexpr const char *HAN{"Contador"};

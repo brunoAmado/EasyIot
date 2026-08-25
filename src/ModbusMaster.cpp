@@ -739,6 +739,10 @@ uint8_t ModbusMaster::ModbusMasterTransaction(uint8_t u8MBFunction)
       {
         _idle();
       }
+      // Let the Wi-Fi/TCP stack and watchdog run while a meter is silent or a
+      // partial response has stalled. This must be in the no-data branch: tying
+      // it to a particular ADU length leaves that exact length spinning.
+      yield();
 #if __MODBUSMASTER_DEBUG__
       digitalWrite(__MODBUSMASTER_DEBUG_PIN_B__, false);
 #endif

@@ -1,8 +1,13 @@
-package-lock.json
-package.json
+# package.json/package-lock.json are tracked on purpose: the web panel minifiers
+# are pinned build dependencies whose output is embedded in the firmware image.
 node_modules
+__pycache__/
+*.py[cod]
 .DS_Store
 .pio
+platformio_override.ini
+/AGENTS.md
+/.agent/
 .vscode
 .gitignore
 .vscode/launch.json
@@ -10,10 +15,15 @@ node_modules
 graphify-out/
 .graphifyignore
 
-.DS_Store
-
 /run_graphify.ps1
 /run_graphify_update.ps1
 /.env
 CLAUDE.md
 GEMINI.md
+
+RELEASE_NOTES_DRAFT.md
+
+# Written by the pioarduino platform during the build, not source.
+src/idf_component.yml
+src/idf_component.yml.orig
+/firmware_bins/

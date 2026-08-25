@@ -1,4 +1,5 @@
 #include "Actuatores.h"
+#include "Irrigation.h"
 #include "HomeAssistantMqttDiscovery.h"
 #include "WebServer.h"
 #include "Constants.h"
@@ -60,7 +61,7 @@ void onShuttersLevelReached(Shutters *shutters, uint8_t level)
 {
   for (auto &a : config.actuatores)
   {
-    if (a.id == shutters->actuatorId)
+    if (a.ready && a.id == shutters->actuatorId)
     {
       a.state = level;
       a.notifyState(StateOrigin::INTERNAL);
@@ -76,7 +77,7 @@ void actuatoresCallback(message_t const &msg, void *arg)
 
   for (auto &s : config.actuatores)
   {
-    if (!s.isKnxSupport())
+    if (!s.ready || !s.isKnxSupport())
     {
       continue;
     }
@@ -113,7 +114,7 @@ void actuatoresCallback(message_t const &msg, void *arg)
         if (s.state != state)
         {
           s.changeState(StateOrigin::KNX, state);
-          config.requestSave();
+          config.save();
         }
         break;
       }
@@ -130,7 +131,7 @@ void toogle(Button2 &btn)
       if (a.isDimmer() && btn.wasPressedFor() > 500)
       {
         a.dimmingUp = !a.dimmingUp;
-        config.requestSave();
+        config.save();
       }
       else
       {
@@ -214,9 +215,9 @@ void stopShutter(Button2 &btn)
 }
 void garageNotify(Button2 &btn)
 {
-  for (auto a : config.actuatores)
+  for (auto &a : config.actuatores)
   {
-    if (a.id == btn.getID())
+    if (a.ready && a.id == btn.getID())
     {
 
       a.state = digitalRead(btn.getPin()) ? OFF_OPEN : ON_CLOSE;
@@ -225,37 +226,10 @@ void garageNotify(Button2 &btn)
   }
 }
 
-void Actuator::setup()
+void Actuator::rebuildInputHandlers()
 {
-  ready = false;
   buttons.clear();
-  id = config.featureIds++;
-  if (isCover() && outputs.size() == 2 && typeControl == ActuatorControlType::GPIO_OUTPUT)
-  {
-    shutter = new Shutters(outputs[0], outputs[1], id);
-    shutter->setOperationHandler(shuttersOperationHandler)
-        .restoreState(state, upCourseTime * 1000, downCourseTime * 1000)
-        .setCourseTime(upCourseTime * 1000, downCourseTime * 1000)
-        .onLevelReached(onShuttersLevelReached)
-        .begin();
-  }
-  for (auto output : outputs)
-  {
-    configPIN(output, OUTPUT);
-    writeToPIN(output, 0);
-    if (isLight() || isSwitch() || isGardenValve())
-    {
-      if (isDimmer())
-      {
-        writePWMToPIN(output, state);
-      }
-      else
-      {
-        writeToPIN(output, state);
-      }
-    }
-  }
-  if (isLight() || isSwitch())
+  if (isLight() || isSwitch() || isGardenValve())
   {
     for (auto input : inputs)
     {
@@ -267,6 +241,7 @@ void Actuator::setup()
       case ActuatorDriver::LIGHT_PUSH:
       case ActuatorDriver::SWITCH_PUSH:
       case ActuatorDriver::LIGHT_DIMMER:
+      case ActuatorDriver::GARDEN_VALVE:
         button.setPressedHandler(toogle);
         break;
       case ActuatorDriver::LIGHT_LATCH:
@@ -280,7 +255,7 @@ void Actuator::setup()
       buttons.push_back(button);
     }
   }
-  else if (isGarage() && typeControl == ActuatorControlType::GPIO_OUTPUT)
+  else if (isGarage() && typeControl == ActuatorControlType::GPIO_OUTPUT && !inputs.empty())
   {
     Button2 button;
     button.begin(inputs[0]);
@@ -338,6 +313,43 @@ void Actuator::setup()
       buttons.push_back(buttonRotate);
     }
   }
+}
+
+void Actuator::setup()
+{
+  ready = false;
+  id = config.featureIds++;
+  // Irrigation valve state is runtime-only. A reset, power loss, or unrelated
+  // configuration save must never reopen a valve from a persisted ON value.
+  if (isGardenValve())
+    state = ActuatorState::OFF_OPEN;
+  if (isCover() && outputs.size() == 2 && typeControl == ActuatorControlType::GPIO_OUTPUT)
+  {
+    shutter = new Shutters(outputs[0], outputs[1], id);
+    shutter->setOperationHandler(shuttersOperationHandler)
+        .restoreState(state, upCourseTime * 1000, downCourseTime * 1000)
+        .setCourseTime(upCourseTime * 1000, downCourseTime * 1000)
+        .onLevelReached(onShuttersLevelReached)
+        .begin();
+  }
+  for (auto output : outputs)
+  {
+    configPIN(output, OUTPUT);
+    writeToPIN(output, 0);
+    if (isLight() || isSwitch() || isGardenValve())
+    {
+      if (isDimmer())
+      {
+        writePWMToPIN(output, state);
+      }
+      else
+      {
+        writeToPIN(output, state);
+      }
+    }
+  }
+
+  rebuildInputHandlers();
 
   if (isKnxSupport())
   {
@@ -346,6 +358,19 @@ void Actuator::setup()
     knx.callback_assign(config.knxIdRegister, knx.GA_to_address(knxAddress[0], 0, 0));
   }
   ready = true;
+}
+
+void Actuator::deactivateForConfigUpdate()
+{
+  if (!ready)
+    return;
+
+  // A normal stop is completed by a later Shutters::loop() call. Configuration
+  // updates stop looping an inert actuator, so reset is required here: it sends
+  // HALT to the relays synchronously before their GPIO ownership changes.
+  ready = false;
+  if (isCover() && typeControl == ActuatorControlType::GPIO_OUTPUT && shutter != nullptr)
+    shutter->reset();
 }
 
 void Actuator::notifyState(StateOrigin origin)
@@ -363,6 +388,10 @@ void Actuator::notifyState(StateOrigin origin)
     if (isRelay() && cloudIOConnected())
     {
       notifyStateToCloudIO(cloudIOreadTopic, stateStr.c_str());
+      // A valve moving is the only thing that changes the irrigation picture
+      // often, and the apps draw a countdown from it.
+      if (isGardenValve())
+        notifyIrrigation();
     }
 
     // Notify by SSW Webpanel
@@ -378,11 +407,62 @@ void Actuator::notifyState(StateOrigin origin)
   }
 }
 
+bool Actuator::valveClock(unsigned long &left, unsigned long &total) const
+{
+  if (driver != ActuatorDriver::GARDEN_VALVE || state != ActuatorState::ON_CLOSE)
+    return false;
+  if (irrigation.zoneCountdown(uniqueId, left, total))
+    return true;
+  if (autoOff == 0ul)
+    return false;
+  const unsigned long elapsed = (millis() - lastChange) / 1000ul;
+  total = autoOff;
+  left = elapsed < total ? total - elapsed : 0ul;
+  return true;
+}
+
 Actuator *Actuator::changeState(StateOrigin origin, int state)
 {
+  if (!ready)
+    return this;
+
   lastChange = millis();
   if (!isGarage() && this->state == state)
     return this;
+  // How many irrigation zones may be open at once is what the supply pressure
+  // feeds, so it is configured per installation (1-5) rather than fixed here.
+  // The guard belongs in this function, not in an interface: a wall button, MQTT,
+  // the cloud and the web panel all reach a valve through it, so anywhere else it
+  // would be advisory. Closing the excess recurses once with OFF_OPEN, which
+  // cannot re-enter this branch.
+  if (isGardenValve() && state == ActuatorState::ON_CLOSE)
+  {
+    std::vector<Actuator *> open;
+    for (auto &other : config.actuatores)
+    {
+      if (other.isGardenValve() && strcmp(other.uniqueId, uniqueId) != 0 &&
+          other.state == ActuatorState::ON_CLOSE)
+        open.push_back(&other);
+    }
+    // Oldest first, counting this valve against the limit since it is about to
+    // open: the zone that has been watering longest is the one with least left
+    // to lose, and it is the least likely to be what someone just asked for.
+    while (open.size() + 1 > irrigation.openZoneLimit())
+    {
+      auto oldest = open.begin();
+      for (auto it = open.begin(); it != open.end(); ++it)
+      {
+        if ((long)((*it)->lastChange - (*oldest)->lastChange) < 0)
+          oldest = it;
+      }
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s Closing %s: %d zone(s) at a time." CR, tags::actuatores,
+                 (*oldest)->name, irrigation.openZoneLimit());
+#endif
+      (*oldest)->changeState(StateOrigin::INTERNAL, ActuatorState::OFF_OPEN);
+      open.erase(oldest);
+    }
+  }
 #ifdef DEBUG_ONOFRE
   Log.notice("%s Name:      %s" CR, tags::actuatores, name);
   Log.notice("%s State:     %d" CR, tags::actuatores, state);
@@ -393,6 +473,11 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   {
     if (isCover())
     {
+      // A malformed legacy cover can reach runtime without a Shutters
+      // instance. Fail closed instead of dereferencing a null pointer.
+      if (shutter == nullptr)
+        return this;
+
       int level = state;
       if (level == ActuatorState::STOP)
         shutter->stop();
@@ -401,7 +486,9 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
     }
     else if (isGarage())
     {
-      writeToPIN(outputs[0], state == ActuatorState::ON_CLOSE ? HIGH : LOW);
+      writeToPIN(outputs[0], HIGH);
+      delay(1000);
+      writeToPIN(outputs[0], LOW);
     }
     else if ((isLight() || isSwitch() || isGardenValve()))
     {
@@ -426,7 +513,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
 #endif
     for (auto &sw : config.actuatores)
     {
-      if (isKnxSupport() && sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
+      if (sw.ready && isKnxSupport() && sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
       {
         if (sw.isRelay() && sw.knxAddress[0] == knxAddress[0] && ((knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0)))
         {
@@ -445,7 +532,7 @@ Actuator *Actuator::changeState(StateOrigin origin, int state)
   {
     for (auto &sw : config.actuatores)
     {
-      if (sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
+      if (sw.ready && sw.isKnxSupport() && strcmp(sw.uniqueId, uniqueId) != 0)
       {
         if (sw.knxAddress[0] == knxAddress[0] && ((knxAddress[1] == 0 && knxAddress[2] == 0) || (knxAddress[1] == sw.knxAddress[1] && knxAddress[2] == 0)))
         {

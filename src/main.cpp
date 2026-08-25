@@ -2,8 +2,10 @@
 #include "ConfigOnofre.h"
 #include "CloudIO.h"
 #include "WebServer.h"
+#include "DeviceLog.h"
 #include "CoreWiFi.h"
 #include "Mqtt.h"
+#include "Persistence.h"
 #include <esp-knx-ip.h>
 #include "LittleFS.h"
 #ifdef ESP32
@@ -16,37 +18,6 @@ ConfigOnofre config;
 #ifdef DEBUG_ONOFRE
 namespace
 {
-#ifdef ESP32
-const char *esp32ResetReasonToText(esp_reset_reason_t reason)
-{
-  switch (reason)
-  {
-  case ESP_RST_POWERON:
-    return "Power-on";
-  case ESP_RST_EXT:
-    return "External reset";
-  case ESP_RST_SW:
-    return "Software reset";
-  case ESP_RST_PANIC:
-    return "Exception/Panic";
-  case ESP_RST_INT_WDT:
-    return "Interrupt watchdog";
-  case ESP_RST_TASK_WDT:
-    return "Task watchdog";
-  case ESP_RST_WDT:
-    return "Other watchdog";
-  case ESP_RST_DEEPSLEEP:
-    return "Deep sleep wake";
-  case ESP_RST_BROWNOUT:
-    return "Brownout";
-  case ESP_RST_SDIO:
-    return "SDIO reset";
-  default:
-    return "Unknown";
-  }
-}
-#endif
-
 const char *webSecureState()
 {
 #if defined(WEB_SECURE_ON)
@@ -65,20 +36,14 @@ const char *langDefault()
 #endif
 }
 
-String resetReasonText()
-{
-#ifdef ESP8266
-  return ESP.getResetReason();
-#else
-  return String(esp32ResetReasonToText(esp_reset_reason()));
-#endif
-}
-
 void logBootBanner()
 {
   const String firmwareVersion = String(VERSION);
   const String firmwareBuildDate = String(__DATE__ " " __TIME__);
-  const String resetReason = resetReasonText();
+  const String resetReason = deviceResetReason();
+  // First line of the buffer, always: without it a log is a set of events with no
+  // idea which boot they belong to.
+  deviceLog("arranque fw %s motivo %s", firmwareVersion.c_str(), resetReason.c_str());
 
   Log.info("----------------------------------------------" CR);
   Log.info("%s Reset reason: %s" CR, tags::system, resetReason.c_str());
@@ -102,6 +67,55 @@ void logBootBanner()
 
 void checkInternalRoutines()
 {
+  // Async Cloud callbacks only publish bounded events or copy commands. Keep
+  // all connection, watchdog, and feature work in the main execution context.
+  serviceCloudIOMqtt();
+  serviceCloudIOWatchdog();
+
+  // Async Cloud MQTT callbacks only copy commands into a bounded queue. Apply
+  // one from the main context before consuming restart/update requests so a
+  // queued system command can take effect in this same loop pass.
+  drainCloudIOCommands();
+
+  const int requestedTemplateId = config.peekTemplateChangeRequest();
+  if (requestedTemplateId != Template::NO_TEMPLATE)
+  {
+#ifdef DEBUG_ONOFRE
+    Log.notice("%s Applying template: %d" CR, tags::system, requestedTemplateId);
+#endif
+    if (!config.tryBeginFeatureAccess())
+    {
+      // Leave the occupied request slot untouched. A later pass retries it,
+      // while concurrent requests receive BUSY instead of overwriting it.
+    }
+    else
+    {
+      config.templateId = Template::NO_TEMPLATE;
+      if (config.loadTemplate(requestedTemplateId))
+      {
+        if (!config.persist())
+        {
+#ifdef DEBUG_ONOFRE
+          Log.error("%s Template storage failed; restoring previous configuration" CR,
+                    tags::system);
+#endif
+        }
+        // Retain the lease until the next pass services this restart request.
+        // On storage failure the old atomic file is still authoritative, so the
+        // same restart also rolls the live draft back.
+        config.requestRestart();
+      }
+      else
+      {
+#ifdef DEBUG_ONOFRE
+        Log.error("%s Template change failed: %d" CR, tags::system, requestedTemplateId);
+#endif
+        config.clearTemplateChangeRequest(requestedTemplateId);
+        config.endFeatureAccess();
+      }
+    }
+  }
+
   if (config.isCloudIOSyncRequested())
   {
 #ifdef DEBUG_ONOFRE
@@ -133,27 +147,71 @@ void checkInternalRoutines()
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Load Defaults requested." CR, tags::system);
 #endif
-#if defined(ESP32) && !defined(LEGACY_PROVISON)
-    ESP_ERROR_CHECK(nvs_flash_erase());
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    if (!config.tryBeginFeatureAccess())
     {
-      ESP_ERROR_CHECK(nvs_flash_erase());
-      ESP_ERROR_CHECK(nvs_flash_init());
+      config.requestLoadDefaults();
     }
+    else
+    {
+#if defined(ESP32) && !defined(LEGACY_PROVISON)
+      ESP_ERROR_CHECK(nvs_flash_erase());
+      esp_err_t ret = nvs_flash_init();
+      if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND)
+      {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ESP_ERROR_CHECK(nvs_flash_init());
+      }
 #endif
-    LittleFS.format();
-    config.requestRestart();
+      LittleFS.format();
+      // Reset completion is the terminal operation. Keep all feature access
+      // blocked until the restart request is serviced.
+      config.requestRestart();
+    }
   }
 
-  if (config.isAutoUpdateRequested())
+  if (config.takeAutoUpdateRequest())
   {
 #ifdef DEBUG_ONOFRE
     Log.notice("%s Auto Update Request." CR, tags::system);
 #endif
-    config.pauseFeatures();
-    stopWebserver();
-    performUpdate();
+    if (!config.tryBeginFeatureAccess())
+    {
+      config.requestAutoUpdate();
+    }
+    else
+    {
+      stopWebserver();
+#ifdef ESP8266
+      disconnectMqttForUpdate();
+      disconnectCloudIOForUpdate();
+      // AsyncTCP releases its PCB/buffers from deferred callbacks. Yield briefly
+      // before measuring the OTA gate; otherwise the log can say the services
+      // stopped while their heap is still owned by the network stack.
+      delay(100);
+#ifdef DEBUG_ONOFRE
+      Log.notice("%s OTA services stopped: heap=%u maxBlock=%u fragmentation=%u%%" CR,
+                 tags::system,
+                 ESP.getFreeHeap(),
+                 ESP.getMaxFreeBlockSize(),
+                 ESP.getHeapFragmentation());
+#endif
+#endif
+      const AutoUpdateResult updateResult = performUpdate();
+      if (updateResult == AutoUpdateResult::UPDATED)
+      {
+        // The updater normally reboots on success. Keep an explicit fallback
+        // request so a future framework setting cannot leave the web server
+        // stopped and the feature lease held forever.
+        config.requestRestart();
+      }
+      else
+      {
+        // Failed and no-update checks both return to the running firmware.
+        // Restore the lease and web service around the blocking updater.
+        config.endFeatureAccess();
+        startWebserver();
+      }
+    }
   }
 
   if (config.isReloadWifiRequested())
@@ -188,10 +246,8 @@ void featuresTask(void *pvParameters)
 {
   for (;;)
   {
-    if (!config.isLoopFeaturesPaused())
-    {
-      config.loopSensors();
-    }
+    config.loopSensors();
+    config.serviceDeferredI2cDiscovery();
     vTaskDelay(1);
   }
 }
@@ -208,7 +264,18 @@ void setup()
 #endif
 
   startFileSystem();
+  if (!applyPendingRestore())
+  {
+    deviceLog("recuperacao pendente falhou");
+#ifdef DEBUG_ONOFRE
+    Log.error("%s Pending recovery failed; retained the previous configuration where possible." CR,
+              tags::config);
+#endif
+  }
   config.load();
+  // Authentication credentials stay immutable for this boot. Credential edits
+  // request a controlled restart before the new snapshot becomes active.
+  initializeWebAuthCredentials();
 #ifdef DEBUG_ONOFRE
   logBootBanner();
 #endif
@@ -222,10 +289,20 @@ void setup()
 #endif
   setupMQTT(false);
 #ifdef ESP32
-#ifdef HAN_MODE
-  xTaskCreate(featuresTask, "Features-Task", 4048, NULL, 100, NULL);
+// Priority 100 is above configMAX_PRIORITIES, so FreeRTOS clamped it to the top of
+// the range — putting sensor polling above the WiFi and TCP/IP tasks, which then
+// only ran when this one happened to yield. Sensor reads are background work; keep
+// them below the network stack. Arduino's own loop runs at 1.
+#define FEATURES_TASK_PRIORITY 2
+  // Pin to the second core only where there is one. The C6 and C3 are single-core
+  // (CONFIG_FREERTOS_UNICORE), and asking FreeRTOS for core 1 there trips
+  // configASSERT(xCoreID < configNUMBER_OF_CORES) — the board panics at the end of
+  // setup() and reboots, which looks exactly like a device that never brings its
+  // access point up. HAN_MODE keeps the unpinned task it always had.
+#if defined(CONFIG_FREERTOS_UNICORE) || defined(HAN_MODE)
+  xTaskCreate(featuresTask, "Features-Task", 4048, NULL, FEATURES_TASK_PRIORITY, NULL);
 #else
-  xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, 100, NULL, 1);
+  xTaskCreatePinnedToCore(featuresTask, "Features-Task", 4048, NULL, FEATURES_TASK_PRIORITY, NULL, 1);
 #endif
 #endif
 }
@@ -239,15 +316,10 @@ void loop()
   {
     webserverServicesLoop();
     loopMqtt();
-    if (!config.isLoopFeaturesPaused())
-    {
-      config.loopActuators();
-    }
+    config.loopActuators();
 #ifdef ESP8266
-    if (!config.isLoopFeaturesPaused())
-    {
-      config.loopSensors();
-    }
+    config.loopSensors();
+    config.serviceDeferredI2cDiscovery();
 #endif
   }
 }
