@@ -51,9 +51,12 @@ nav:
   - Welcome: Home.md
   - Getting Started:
     - How to Build and Configure: How_To_Build_And_Configure.md
-  - User Guide: User_Guide.md
+  - User Guide:
+    - General Manual: User_Guide.md
+    - AquaDance & Musical Fountain: AquaDance_Fontaine_Matrix.md
   - Web Interface Guide: Web_Interface_Guide.md
   - Developer Guide:
     - Developer Manual: Developer_Guide.md
+    - Hardware Emulation & Renode: Hardware_Emulation_And_Testing.md
     - Code Graph Index: index.md
   - Troubleshooting & Recovery: Troubleshooting_And_Smoke_Tests.md
