@@ -20,6 +20,11 @@ $bin?=$ORIGIN/../.pio/build/ESP32_DEBUG/firmware.elf
 macro reset
 """
     sysbus LoadELF $bin
+    # Initialize Xtensa Windowed Register State (simulating Boot ROM setup)
+    cpu SetRegister "PS" 0x00040020
+    cpu SetRegister "A1" 0x3FFE3E20
+    cpu SetRegister "WINDOWBASE" 0
+    cpu SetRegister "WINDOWSTART" 1
 """
 
 runMacro $reset

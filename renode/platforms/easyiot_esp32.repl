@@ -3,31 +3,19 @@
 // Self-contained platform description (Xtensa CPU, RAM, ROM, Flash, GPIO & UART)
 // ==============================================================================
 
-// Data RAM (DRAM - Internal SRAM 1 & 2)
-// 0x3FFB0000 - 0x3FFDFFFF (192 KB)
-dram1: Memory.MappedMemory @ sysbus 0x3FFB0000
-    size: 0x30000
+// Data Memory & Internal SRAM (0x3FF00000 - 0x3FFFFFFF, 1 MB)
+dram_full: Memory.MappedMemory @ sysbus 0x3FF00000
+    size: 0x100000
 
-// 0x3FFE0000 - 0x3FFFFFFF (128 KB)
-dram0: Memory.MappedMemory @ sysbus 0x3FFE0000
-    size: 0x20000
-
-// Data Flash (Read-Only Data Cache)
-// 0x3F400000 - 0x3F7FFFFF (4 MB)
+// Data Flash (Read-Only Data Cache, 0x3F400000 - 0x3F7FFFFF, 4 MB)
 flash_rodata: Memory.MappedMemory @ sysbus 0x3F400000
     size: 0x400000
 
-// Instruction RAM (IRAM - Application Vectors & Fast Code)
-// 0x40000000 - 0x4007FFFF (512 KB)
-iram_base: Memory.MappedMemory @ sysbus 0x40000000
-    size: 0x80000
+// Instruction RAM (IRAM & Vector Memory, 0x40000000 - 0x400FFFFF, 1 MB)
+iram_full: Memory.MappedMemory @ sysbus 0x40000000
+    size: 0x100000
 
-// 0x40080000 - 0x4009FFFF (128 KB)
-iram0: Memory.MappedMemory @ sysbus 0x40080000
-    size: 0x20000
-
-// Instruction Flash (MMU Mapped Application Flash)
-// 0x400D0000 - 0x404CFFFF (4 MB)
+// Instruction Flash (MMU Mapped Application Flash, 0x400D0000 - 0x404CFFFF, 4 MB)
 flash_inst: Memory.MappedMemory @ sysbus 0x400D0000
     size: 0x400000
 
@@ -39,9 +27,9 @@ rom: Memory.MappedMemory @ sysbus 0x50000000
 ram: Memory.MappedMemory @ sysbus 0x60000000
     size: 0x8000000
 
-// Xtensa Core
+// Xtensa Core (ESP32 LX6 Dual-Core Architecture)
 cpu: CPU.Xtensa @ sysbus
-    cpuType: "sample_controller"
+    cpuType: "esp32"
     frequency: 240000000
 
 // Semihosting & Serial Monitor
