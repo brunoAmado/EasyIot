@@ -25,6 +25,8 @@ macro reset
 runMacro $reset
 
 echo "========================================================="
-echo "⛲ EasyIot ESP32 Hardware Emulation Loaded Successfully!"
-echo "Type 'start' (or press F5) in Renode monitor to begin."
+echo "⛲ EasyIot ESP32 Hardware Emulation Running!"
+echo "CPU execution started automatically. Press F5 to pause/resume."
 echo "========================================================="
+
+start
