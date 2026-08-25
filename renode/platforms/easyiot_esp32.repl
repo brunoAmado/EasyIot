@@ -17,10 +17,14 @@ dram0: Memory.MappedMemory @ sysbus 0x3FFE0000
 flash_rodata: Memory.MappedMemory @ sysbus 0x3F400000
     size: 0x400000
 
-// Instruction RAM (IRAM - Internal SRAM 0)
+// Instruction RAM (IRAM - Application Vectors & Fast Code)
 // 0x40000000 - 0x4007FFFF (512 KB)
-iram0: Memory.MappedMemory @ sysbus 0x40000000
+iram_base: Memory.MappedMemory @ sysbus 0x40000000
     size: 0x80000
+
+// 0x40080000 - 0x4009FFFF (128 KB)
+iram0: Memory.MappedMemory @ sysbus 0x40080000
+    size: 0x20000
 
 // Instruction Flash (MMU Mapped Application Flash)
 // 0x400D0000 - 0x404CFFFF (4 MB)

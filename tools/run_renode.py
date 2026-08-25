@@ -67,6 +67,23 @@ def find_pio_cmd() -> list[str]:
     return [sys.executable, "-m", "platformio"]
 
 
+def find_elf_binary(env: str) -> Path | None:
+    build_dir = ROOT / ".pio" / "build" / env
+    if not build_dir.exists():
+        return None
+    canonical = build_dir / "firmware.elf"
+    if canonical.exists():
+        return canonical
+    elf_files = sorted(build_dir.glob("*.elf"), key=lambda p: p.stat().st_mtime, reverse=True)
+    if elf_files:
+        try:
+            shutil.copy2(elf_files[0], canonical)
+            return canonical
+        except Exception:
+            return elf_files[0]
+    return None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run EasyIot in Renode hardware emulator")
     parser.add_argument("--env", default="ESP32_DEBUG", help="PlatformIO environment to build and run (default: ESP32_DEBUG)")
@@ -79,16 +96,21 @@ def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-    elf_path = ROOT / ".pio" / "build" / args.env / "firmware.elf"
+    elf_path = find_elf_binary(args.env)
 
     # Compile if requested or if binary is missing
-    if args.build or not elf_path.exists():
+    if args.build or elf_path is None or not elf_path.exists():
         print(f"[BUILD] Compiling {args.env} firmware binary using PlatformIO...")
         pio_cmd = find_pio_cmd() + ["run", "-e", args.env]
         res = subprocess.run(pio_cmd, cwd=ROOT)
         if res.returncode != 0:
             print(f"[ERROR] Build failed for environment {args.env}")
             return res.returncode
+        elf_path = find_elf_binary(args.env)
+
+    if elf_path is None or not elf_path.exists():
+        print(f"[ERROR] Could not find firmware ELF binary in .pio/build/{args.env}/")
+        return 1
 
     renode_bin = find_renode_executable(headless=args.test or args.headless)
     if not renode_bin:
@@ -98,10 +120,11 @@ def main() -> int:
         return 0
 
     print(f"[RENODE] Starting Renode ({renode_bin}) with script: {SCRIPT_PATH}...")
+    elf_posix = elf_path.as_posix()
     if args.test:
-        cmd = [renode_bin, str(ROBOT_TEST_PATH)]
+        cmd = [renode_bin, "-e", f"$bin=@{elf_posix}", str(ROBOT_TEST_PATH)]
     else:
-        cmd = [renode_bin, "--plain", str(SCRIPT_PATH)]
+        cmd = [renode_bin, "--plain", "-e", f"$bin=@{elf_posix}", str(SCRIPT_PATH)]
 
     return subprocess.run(cmd, cwd=ROOT).returncode
 
