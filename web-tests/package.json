@@ -1,0 +1,13 @@
+{
+  "name": "easyiot-web-tests",
+  "version": "1.0.0",
+  "description": "E2E Web Integration Tests for EasyIot Web Panel",
+  "main": "test-runner.js",
+  "scripts": {
+    "test": "node test-runner.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "playwright": "^1.44.1"
+  }
+}
