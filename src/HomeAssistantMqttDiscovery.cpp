@@ -125,6 +125,32 @@ void addToHomeAssistant(Sensor &s)
     publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
 
     break;
+  case LDC1612:
+    // Two entities. The total carries device_class water and state_class
+    // total_increasing, which is exactly what Home Assistant's water dashboard
+    // looks for — with those two it appears there on its own, with daily and
+    // monthly consumption, and no template or helper to write.
+    object["uniq_id"] = "water" + uniqueId;
+    object["name"] = String(s.name) + " total";
+    object["unit_of_meas"] = "L";
+    object["dev_cla"] = "water";
+    object["stat_cla"] = "total_increasing";
+    object["val_tpl"] = "{{ value_json.liters | round(0) }}";
+    object["ic"] = "mdi:water";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+
+    objectStr = "";
+    object["uniq_id"] = "waterflow" + uniqueId;
+    object["name"] = String(s.name) + " caudal";
+    object["unit_of_meas"] = "L/min";
+    object["dev_cla"] = "volume_flow_rate";
+    object["stat_cla"] = "measurement";
+    object["val_tpl"] = "{{ value_json.flow | round(1) }}";
+    object["ic"] = "mdi:water-pump";
+    serializeJson(object, objectStr);
+    publishOnMqtt(String(String(constantsMqtt::homeAssistantAutoDiscoveryPrefix) + "/sensor/" + (object["uniq_id"] | "") + "/config").c_str(), objectStr.c_str(), false);
+    break;
   case LTR303X:
     object["uniq_id"] = uniqueId;
     object["unit_of_meas"] = "lx";
@@ -700,6 +726,18 @@ void initHomeAssistantDiscovery()
 
 namespace
 {
+  /**
+   * Lets Home Assistant compose "<device> <entity>" itself, which is what makes the
+   * entity_id predictable: binary_sensor.quadro_geral_a_regar rather than
+   * binary_sensor.a_regar, a_regar_2, a_regar_3 as soon as a second controller
+   * exists. A dashboard cannot be written against names that depend on the order
+   * devices were discovered in.
+   */
+  void haEntityNaming(JsonObject &object)
+  {
+    object["has_entity_name"] = true;
+  }
+
   void haDevice(JsonObject &object)
   {
     JsonObject device = object["dev"].to<JsonObject>();
@@ -769,6 +807,7 @@ void createHaIrrigation()
     JsonObject clockAvailable = availability.add<JsonObject>();
     clockAvailable["t"] = zoneClockAvailabilityTopic(sw.uniqueId);
     object["avty_mode"] = "all";
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("sensor", uniqueId, doc);
   }
@@ -783,6 +822,7 @@ void createHaIrrigation()
     object["val_tpl"] = "{{ 'ON' if value_json.running else 'OFF' }}";
     object["dev_cla"] = "running";
     object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("binary_sensor", uniqueId, doc);
   }
@@ -797,6 +837,7 @@ void createHaIrrigation()
     object["pl_prs"] = "STOP";
     object["ic"] = "mdi:water-off";
     object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("button", uniqueId, doc);
   }
@@ -818,6 +859,7 @@ void createHaIrrigation()
     object["ic"] = "mdi:water-pump";
     object["ent_cat"] = "config";
     object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("number", uniqueId, doc);
   }
@@ -849,6 +891,7 @@ void createHaIrrigation()
     object["pl_prs"] = "RUN:" + String(id);
     object["ic"] = "mdi:sprinkler-variant";
     object["avty_t"] = config.healthTopic;
+    haEntityNaming(object);
     haDevice(object);
     publishHaConfig("button", uniqueId, doc);
   }

@@ -2,6 +2,97 @@
 
 All notable changes to this project are documented in this file.
 
+## [9.202] - 2026-08-31
+
+### Added
+- **Water meters are now a feature: an inductive pickup on the meter's own rotating
+  target, read by an LDC1612 over I2C.** It is the same principle Itron's own Cyble
+  module uses — "detection is by change of induction", in their words — so it works
+  through a sealed cover, is immune to magnets, and needs no cooperation from the
+  water company. Validated on an Itron Aquadis+ before being written: 48 turns
+  counted against 56 litres on the meter's own register.
+- Publishes litres and flow, and reaches Home Assistant as two entities: the total
+  with `device_class: water` and `state_class: total_increasing`, which is what puts
+  it in the water dashboard on its own with daily and monthly consumption, and the
+  flow as `volume_flow_rate` in L/min.
+- The panel takes the meter's current reading in m³ and the litres-per-turn from the
+  meter's face. The coil counts turns of a target and cannot know what ran through
+  before it was fitted, so that number is typed in once — and it is written to flash
+  at the end of each draw, not once per litre, because flash wears out and a meter is
+  meant to keep counting for years.
+
+### Notes on what was measured
+- Thermal drift on this meter reached 84,000 counts over two seconds against a
+  1,400-count signal, so the driver subtracts a ten-second average and works on the
+  residual. Judged against a fixed baseline instead, the drift alone counted 1,638
+  litres in a minute that used none.
+- The trigger compares the residual with its own amplitude. Comparing the raw value
+  with the slow average — the obvious first attempt — lost one turn in seven, because
+  a shallow cycle riding on a moving average never reaches a fixed offset from it.
+- Accuracy at maximum flow was 86% with the coil hand-held over the target. A coil
+  made to fit the target would raise the margin considerably; the signal is 1,470
+  counts out of 43.9 million, which works but leaves little room.
+
+### Para testers
+- **Já se pode ler um contador de água.** Precisa de um sensor LDC1612 no I²C e de
+  uma bobina encostada ao contador, sobre o alvo — nos Itron Aquadis+ é o círculo
+  marcado na face, onde encaixaria o módulo da Itron.
+- Escreve-se a leitura actual do contador no painel (em m³, com os dígitos vermelhos)
+  e os litros por volta, que estão impressos na face — no Aquadis+ é **HF 1L**.
+- Em Home Assistant aparece sozinho no **painel de água**, com consumo diário e
+  mensal, sem configurares nada.
+
+## [9.201] - 2026-08-28
+
+### Added
+- **ESP8266 builds now have an evidence-based static-RAM release gate.** Normal
+  and HAN release/debug profiles measure `.data + .rodata + .bss` directly from
+  the linked ELF, report their byte margin and change from the reviewed v9.200
+  baseline, and refuse to publish a candidate above the configured ceiling.
+- The release workflow repeats the guard explicitly in CI. Budget validation is
+  also part of the quick project checks, with host tests covering configuration,
+  ELF parsing, pass/fail boundaries, publication ordering, and CI wiring.
+
+### Validation
+- v9.200 baselines: 47,780 bytes (`ESP8266_RELEASE`), 47,796 bytes
+  (`ESP8266-HAN_RELEASE`), 52,188 bytes (`ESP8266_DEBUG`), and 52,204 bytes
+  (`ESP8266-HAN_DEBUG`). Release ceilings are 50,000 bytes and debug ceilings
+  are 54,000 bytes; both would reject the known v9.198 OTA regression builds.
+- Static RAM remains an early warning only. Changes affecting RAM or network
+  lifecycles still require automatic HTTPS OTA on real ESP8266 hardware because
+  an ELF cannot measure runtime heap fragmentation.
+- Verified here before merging: the guard passes the four protected builds with
+  measured margin, and a ceiling set one byte below the real figure fails the check
+  with exit code 1 — before the release workflow renames or uploads anything.
+
+### Para testers
+- **Nada de novo para ver.** Esta versão é uma rede de segurança na fábrica: a partir
+  de agora uma alteração que faça crescer a memória fixa dos ESP8266 acima do limite
+  revisto **não chega a ser publicada**.
+- É a resposta à falha da 9.198, em que o equipamento compilava bem e só depois
+  ficava sem memória a meio da actualização segura — o pior sítio para se descobrir.
+
+## [9.200] - 2026-08-25
+
+### Fixed
+- **The irrigation entities now have predictable ids in Home Assistant.** They were
+  published with bare names — "A regar", "Parar rega" — so Home Assistant made
+  `binary_sensor.a_regar` for the first controller and `binary_sensor.a_regar_2` for
+  the next, decided by whichever was discovered first. A dashboard cannot be written
+  against that. With `has_entity_name` the platform composes "<device> <entity>"
+  itself and the ids become `binary_sensor.<device>_a_regar`.
+- Only the irrigation entities change. The switches, covers and sensors keep the ids
+  they have been in the field with for months; renaming those would break automations
+  people already wrote.
+
+### Para testers
+- **Quem usa Home Assistant:** as entidades da rega passam a ter nomes prefixados
+  pelo equipamento ("Quadro Geral A regar" em vez de "A regar"), o que torna os
+  identificadores previsíveis e permite escrever um cartão no painel sem depender da
+  ordem em que os equipamentos foram descobertos.
+- Se já tinhas automações a apontar para as entidades da rega criadas hoje, os
+  identificadores mudam uma vez — as dos interruptores e estores ficam iguais.
+
 ## [9.199] - 2026-08-25
 
 ### Fixed
