@@ -51,6 +51,12 @@ jobs:
       run: |
         pio run -e ESP8266_DEBUG
         pio run -e ESP32_DEBUG
+        if [ -d .pio/build/ESP32_DEBUG ] && [ ! -f .pio/build/ESP32_DEBUG/firmware.elf ]; then
+          latest_elf=$(ls -t .pio/build/ESP32_DEBUG/*.elf 2>/dev/null | head -n 1)
+          if [ -n "$latest_elf" ]; then
+            cp "$latest_elf" .pio/build/ESP32_DEBUG/firmware.elf
+          fi
+        fi
 
     - name: Run PlatformIO Unit Tests
       run: pio test -e native
