@@ -230,7 +230,10 @@ void ConfigOnofre::i2cDiscovery()
           }
           else
           {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdelete-non-virtual-dtor"
             delete candidate;
+#pragma GCC diagnostic pop
           }
         }
       }
