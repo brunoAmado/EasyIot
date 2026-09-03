@@ -17,5 +17,7 @@ Should Boot EasyIot ESP32 Firmware
     Sleep                     1s
     ${pc}=                    Execute Command    cpu PC
     Log                       CPU Program Counter: ${pc}
-    ${time}=                  Execute Command    emulation GetTime
-    Log                       Emulation Virtual Time: ${time}
+    ${time}=                  Execute Command    currentTime
+    Log                       Emulation Time: ${time}
+    ${instructions}=          Execute Command    cpu ExecutedInstructions
+    Log                       CPU Executed Instructions: ${instructions}
