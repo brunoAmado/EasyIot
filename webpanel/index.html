@@ -47,6 +47,155 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
   <div id="ov-actuators"></div>
   <div class="sec" id="ov-sensors-title">SENSORES</div>
   <div class="grid g3" id="ov-sensors"></div>
+
+  <div class="sec hide" id="ov-radar-title">RADAR &amp; PRESENÇA (VISUALIZADOR 2D)</div>
+  <div class="card radar-studio-card hide" id="ov-radar-studio">
+    <div class="radar-toolbar">
+      <div class="radar-select-wrap">
+        <label for="radar-sensor-select">SENSOR ATIVO</label>
+        <select id="radar-sensor-select"></select>
+      </div>
+      <div class="radar-meta-badges" id="radar-meta-badges">
+        <span class="pill" id="radar-badge-state">Presença: <b>—</b></span>
+        <span class="pill" id="radar-badge-count">Alvos: <b>0</b></span>
+      </div>
+      <div class="radar-actions">
+        <button type="button" class="btn btn-sm" id="radar-btn-sim">▶ Modo Simulação</button>
+        <button type="button" class="btn btn-sm" id="radar-btn-heatmap">🔥 Mapa de Calor</button>
+        <select id="radar-floorplan-select" title="Planta da Divisão">
+          <option value="none">Sem Planta</option>
+          <option value="living">Planta: Sala</option>
+          <option value="bedroom">Planta: Quarto</option>
+          <option value="office">Planta: Escritório</option>
+        </select>
+        <button type="button" class="btn btn-sm" id="radar-btn-eng">⚙ Engenharia</button>
+        <button type="button" class="btn btn-sm" id="radar-btn-export-ha">Copiar Cartão Home Assistant</button>
+      </div>
+    </div>
+
+    <div class="radar-viewport-grid">
+      <!-- 2D Radar Canvas Viewport -->
+      <div class="radar-canvas-wrap" id="radar-canvas-wrap">
+        <svg class="radar-svg" id="radar-svg" viewBox="-3000 0 6000 6000" preserveAspectRatio="xMidYMax meet">
+          <defs>
+            <radialGradient id="radar-glow" cx="50%" cy="100%" r="90%">
+              <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.18"/>
+              <stop offset="60%" stop-color="#0077aa" stop-opacity="0.06"/>
+              <stop offset="100%" stop-color="#020b14" stop-opacity="0"/>
+            </radialGradient>
+          </defs>
+
+          <!-- Floorplan Backdrop Layer -->
+          <g id="radar-floorplan-group"></g>
+
+          <path class="radar-cone" d="M 0,6000 L -3000,803 A 6000,6000 0 0,1 3000,803 Z" fill="url(#radar-glow)" stroke="rgba(0, 229, 255, 0.25)" stroke-width="12"/>
+
+          <!-- Heatmap Density Layer -->
+          <g id="radar-heatmap-group"></g>
+
+          <!-- Distance range arcs -->
+          <circle cx="0" cy="6000" r="1000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="2000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="3000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="4000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="5000" class="radar-grid-arc" fill="none"/>
+          <circle cx="0" cy="6000" r="6000" class="radar-grid-arc" fill="none"/>
+
+          <!-- Distance labels -->
+          <text x="50" y="5040" class="radar-grid-lbl">1m</text>
+          <text x="50" y="4040" class="radar-grid-lbl">2m</text>
+          <text x="50" y="3040" class="radar-grid-lbl">3m</text>
+          <text x="50" y="2040" class="radar-grid-lbl">4m</text>
+          <text x="50" y="1040" class="radar-grid-lbl">5m</text>
+          <text x="50" y="80" class="radar-grid-lbl">6m</text>
+
+          <!-- Angle rays -->
+          <line x1="0" y1="6000" x2="0" y2="0" class="radar-grid-ray"/>
+          <line x1="0" y1="6000" x2="-2121" y2="2121" class="radar-grid-ray"/>
+          <line x1="0" y1="6000" x2="2121" y2="2121" class="radar-grid-ray"/>
+          <text x="-2150" y="2050" class="radar-grid-lbl">-45°</text>
+          <text x="2150" y="2050" class="radar-grid-lbl">+45°</text>
+          <text x="0" y="-30" class="radar-grid-lbl">0°</text>
+
+          <!-- Detection Zones group -->
+          <g id="radar-zones-group"></g>
+
+          <!-- Target motion trails and blips -->
+          <g id="radar-trails-group"></g>
+          <g id="radar-targets-group"></g>
+
+          <!-- Radar Sensor origin point -->
+          <circle cx="0" cy="6000" r="90" class="radar-origin-point"/>
+        </svg>
+      </div>
+
+      <!-- Radar Telemetry & Zones Sidebar -->
+      <div class="radar-sidebar">
+        <!-- LD2410 Energy & Gate Visualizer -->
+        <div class="radar-subcard hide" id="radar-ld2410-card">
+          <h4>ENERGIA &amp; PORTÕES (LD2410)</h4>
+          <div class="radar-gauge-group">
+            <div class="radar-gauge-item">
+              <span class="radar-gauge-title">Alvo em movimento</span>
+              <div class="radar-gauge-bar"><div class="radar-gauge-fill move" id="radar-move-energy-bar" style="width:0%"></div></div>
+              <div class="radar-gauge-meta"><span id="radar-move-dist">— cm</span><span id="radar-move-energy">0%</span></div>
+            </div>
+            <div class="radar-gauge-item">
+              <span class="radar-gauge-title">Alvo estático</span>
+              <div class="radar-gauge-bar"><div class="radar-gauge-fill stat" id="radar-stat-energy-bar" style="width:0%"></div></div>
+              <div class="radar-gauge-meta"><span id="radar-stat-dist">— cm</span><span id="radar-stat-energy">0%</span></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Target Tracking Telemetry Table -->
+        <div class="radar-subcard" id="radar-targets-card">
+          <h4>ALVOS DETETADOS (2D)</h4>
+          <div class="radar-targets-table" id="radar-targets-table">
+            <div class="note">Nenhum alvo detetado no campo de visão.</div>
+          </div>
+        </div>
+
+        <!-- Spatial Zones Management -->
+        <div class="radar-subcard">
+          <div class="radar-subcard-head">
+            <h4>ZONAS DE PRESENÇA</h4>
+            <button type="button" class="btn btn-sm" id="radar-add-zone">+ Nova Zona</button>
+          </div>
+          <div class="radar-zones-list" id="radar-zones-list"></div>
+        </div>
+
+        <!-- Radar Engineering & Gate Thresholds Tuning Drawer -->
+        <div class="radar-subcard hide" id="radar-eng-card">
+          <div class="radar-subcard-head">
+            <h4>CALIBRAÇÃO DE PORTÕES &amp; SENSIBILIDADE</h4>
+          </div>
+          <div class="radar-eng-controls">
+            <div class="field">
+              <label>TEMPO SEM PRESENÇA (s)</label>
+              <input type="number" id="radar-eng-timeout" min="0" max="300" value="5">
+            </div>
+            <div class="field">
+              <label>PORTÃO MÁXIMO DE DETEÇÃO</label>
+              <select id="radar-eng-max-gate">
+                <option value="2">Portão 2 (1.5 m)</option>
+                <option value="3">Portão 3 (2.25 m)</option>
+                <option value="4">Portão 4 (3.0 m)</option>
+                <option value="5">Portão 5 (3.75 m)</option>
+                <option value="6">Portão 6 (4.5 m)</option>
+                <option value="7">Portão 7 (5.25 m)</option>
+                <option value="8" selected>Portão 8 (6.0 m)</option>
+              </select>
+            </div>
+            <div class="radar-gates-grid" id="radar-gates-grid"></div>
+            <div class="btns" style="margin-top:8px">
+              <button type="button" class="btn p btn-sm" id="radar-eng-save">Gravar no Sensor</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div></div>
 
 <!-- ============ PINOUT ============ -->
@@ -178,6 +327,10 @@ try{var t=localStorage.getItem("onofre-theme")||(matchMedia("(prefers-color-sche
         <button type="button" class="btn btn-sm" id="dance-preset-alternate">Cruzado</button>
         <button type="button" class="btn btn-sm" id="dance-preset-pulse">Pulso / Staccato</button>
         <button type="button" class="btn btn-sm" id="dance-preset-clear">Limpar tudo</button>
+        <button type="button" class="btn btn-sm" id="dance-btn-audio">🔊 Áudio: Desligado</button>
+        <button type="button" class="btn btn-sm" id="dance-btn-import">📂 Importar</button>
+        <button type="button" class="btn btn-sm" id="dance-btn-export">💾 Exportar</button>
+        <input type="file" id="dance-file-import" accept=".json" class="hide">
       </div>
       <div class="dance-presets-row" id="dance-color-picker-row">
         <span class="dance-presets-label">Cor ativa (RGBW):</span>

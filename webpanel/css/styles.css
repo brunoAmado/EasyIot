@@ -536,3 +536,87 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
   0% { width: 20px; height: 20px; opacity: 1; }
   100% { width: 75px; height: 75px; opacity: 0; }
 }
+
+/* ---------- Radar & Presence Studio (2D Visualizer) ---------- */
+.radar-studio-card { margin-top: 14px; margin-bottom: 16px; }
+.radar-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.radar-select-wrap { display: flex; flex-direction: column; gap: 4px; min-width: 170px; }
+.radar-select-wrap label { font-size: 10.5px; font-weight: 700; color: var(--dim); }
+.radar-select-wrap select { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; color: var(--txt); font: inherit; font-size: 12px; }
+.radar-meta-badges { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.radar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+
+.radar-viewport-grid { display: grid; grid-template-columns: minmax(280px, 1.4fr) minmax(240px, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 768px) {
+  .radar-viewport-grid { grid-template-columns: 1fr; }
+}
+
+.radar-canvas-wrap { position: relative; width: 100%; height: 350px; border-radius: 12px; overflow: hidden; border: 1px solid var(--line); background: #020b14; display: flex; align-items: center; justify-content: center; box-shadow: inset 0 0 20px rgba(0,0,0,0.6); }
+.radar-svg { width: 100%; height: 100%; user-select: none; }
+
+.radar-cone { transition: fill .3s ease; }
+.radar-grid-arc { stroke: rgba(0, 210, 255, 0.15); stroke-width: 6; stroke-dasharray: 12 8; }
+.radar-grid-ray { stroke: rgba(0, 210, 255, 0.15); stroke-width: 6; stroke-dasharray: 10 10; }
+.radar-grid-lbl { fill: rgba(0, 210, 255, 0.45); font-size: 130px; font-family: monospace; font-weight: bold; }
+.radar-origin-point { fill: #00e5ff; filter: drop-shadow(0 0 10px #00e5ff); }
+
+/* Radar Zones */
+.radar-zone-shape { fill: rgba(0, 210, 255, 0.08); stroke: rgba(0, 210, 255, 0.5); stroke-width: 14; stroke-dasharray: 20 10; rx: 40; cursor: grab; transition: all .15s ease; }
+.radar-zone-shape.active-occupied { fill: rgba(0, 229, 255, 0.28); stroke: #00ffaa; stroke-width: 22; stroke-dasharray: none; filter: drop-shadow(0 0 25px rgba(0, 255, 170, 0.6)); }
+.radar-zone-label { fill: #fff; font-size: 140px; font-weight: bold; pointer-events: none; text-shadow: 0 4px 12px #000; }
+
+/* Radar Target Blips */
+.radar-target-dot { fill: #ff3366; stroke: #fff; stroke-width: 12; filter: drop-shadow(0 0 15px #ff3366); transition: cx .08s linear, cy .08s linear; }
+.radar-target-dot.t1 { fill: #00ffaa; filter: drop-shadow(0 0 16px #00ffaa); }
+.radar-target-dot.t2 { fill: #00d2ff; filter: drop-shadow(0 0 16px #00d2ff); }
+.radar-target-dot.t3 { fill: #ffaa00; filter: drop-shadow(0 0 16px #ffaa00); }
+.radar-target-label { fill: #fff; font-size: 120px; font-weight: bold; pointer-events: none; text-shadow: 0 2px 8px #000; }
+.radar-trail-dot { fill: rgba(0, 255, 170, 0.35); stroke: none; }
+
+/* Sidebar & Gauges */
+.radar-sidebar { display: flex; flex-direction: column; gap: 10px; }
+.radar-subcard { background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.radar-subcard h4 { font-size: 10.5px; font-weight: 700; color: var(--dim); margin: 0 0 8px; text-transform: uppercase; }
+.radar-subcard-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.radar-subcard-head h4 { margin: 0; }
+
+.radar-gauge-group { display: flex; flex-direction: column; gap: 8px; }
+.radar-gauge-item { display: flex; flex-direction: column; gap: 3px; }
+.radar-gauge-title { font-size: 11px; font-weight: 600; color: var(--txt); }
+.radar-gauge-bar { width: 100%; height: 8px; background: var(--card); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
+.radar-gauge-fill { height: 100%; border-radius: 3px; transition: width .15s ease; }
+.radar-gauge-fill.move { background: linear-gradient(90deg, #00d2ff, #00ffaa); }
+.radar-gauge-fill.stat { background: linear-gradient(90deg, #ffaa00, #ff3366); }
+.radar-gauge-meta { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--dim); font-family: monospace; }
+
+.radar-target-row { display: flex; align-items: center; justify-content: space-between; padding: 6px 8px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; margin-bottom: 5px; font-size: 11.5px; }
+.radar-target-tag { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
+.radar-target-badge { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.radar-target-badge.t1 { background: #00ffaa; box-shadow: 0 0 6px #00ffaa; }
+.radar-target-badge.t2 { background: #00d2ff; box-shadow: 0 0 6px #00d2ff; }
+.radar-target-badge.t3 { background: #ffaa00; box-shadow: 0 0 6px #ffaa00; }
+.radar-target-badge.t4, .radar-target-badge.t5 { background: #ff3366; box-shadow: 0 0 6px #ff3366; }
+.radar-target-coords { font-family: monospace; color: var(--dim); }
+
+.radar-zone-item { display: flex; align-items: center; justify-content: space-between; gap: 6px; padding: 5px 8px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; margin-bottom: 5px; font-size: 11.5px; }
+.radar-zone-item.active { border-color: #00ffaa; background: rgba(0, 255, 170, 0.08); }
+.radar-zone-item input { background: transparent; border: none; color: var(--txt); font: inherit; font-size: 11.5px; font-weight: 600; width: 110px; }
+.radar-zone-item input:focus { outline: none; border-bottom: 1px solid var(--grn); }
+
+/* Heatmap & Floorplan */
+.radar-heatmap-point { fill: rgba(255, 60, 0, 0.22); filter: blur(30px); transition: fill .3s ease; }
+.radar-floorplan-room { fill: rgba(255, 255, 255, 0.02); stroke: rgba(255, 255, 255, 0.15); stroke-width: 16; }
+.radar-floorplan-furniture { fill: rgba(0, 210, 255, 0.06); stroke: rgba(0, 210, 255, 0.25); stroke-width: 10; rx: 20; }
+.radar-floorplan-label { fill: rgba(255, 255, 255, 0.35); font-size: 140px; font-family: sans-serif; font-weight: 600; }
+
+/* Radar Engineering Mode & Gate Sliders */
+.radar-gates-grid { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; max-height: 240px; overflow-y: auto; }
+.radar-gate-item { display: flex; flex-direction: column; gap: 2px; padding: 6px 8px; background: var(--card); border: 1px solid var(--line); border-radius: 6px; }
+.radar-gate-head { display: flex; justify-content: space-between; font-size: 11px; font-weight: 600; color: var(--dim); }
+.radar-gate-row { display: grid; grid-template-columns: 50px 1fr 34px; align-items: center; gap: 6px; font-size: 10.5px; }
+.radar-gate-row input[type="range"] { accent-color: var(--grn); cursor: pointer; }
+.radar-gate-row.stat input[type="range"] { accent-color: #ffaa00; }
+.radar-gate-val { text-align: right; font-family: monospace; color: var(--txt); }
+
+.btn.active-audio { background: #00e5ff; color: #000; font-weight: 700; box-shadow: 0 0 10px rgba(0, 229, 255, 0.5); }
+.btn.active-heatmap { background: #ff5500; color: #fff; font-weight: 700; box-shadow: 0 0 10px rgba(255, 85, 0, 0.5); }

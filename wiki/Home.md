@@ -21,6 +21,7 @@ EasyIot is an open-source, lightweight, and highly customizable firmware for **E
 * 🎛️ **[Actuators & Relays](Developer_Guide#3-actuator-driver-subsystem)**: How switches, relays, cover blind calibrations, and hold-to-dim dimmers work.
 * 🌡️ **[Sensors & Radars](Developer_Guide#4-sensor-driver-subsystem)**: Pin configuration and reading intervals for temperature, magnetic reeds, PIRs, and presence radars.
 * 📖 **[Developer Reference](Developer_Guide)**: In-depth structural overview of classes like `ConfigOnofre`, MQTT clients, and Modbus drivers.
+* 🚀 **[Hardware Emulation & Testing](Hardware_Emulation_And_Testing)**: Renode Xtensa emulation, Web panel simulators, and Playwright E2E hardware test suites.
 
 ---
 

@@ -85,3 +85,20 @@ Update `prepareNewFeature()` in `src/Templates.cpp` to map your new driver ID to
 
 ### Step 4: Add Home Assistant Discovery
 Modify `HomeAssistantMqttDiscovery.cpp` to define the Home Assistant MQTT Auto-Discovery configuration payload for your new entity type.
+
+---
+
+## 7. Hardware Validation & E2E Emulation Testing
+
+To ensure stability across all 4 hardware targets (`ESP8266`, `ESP8266-HAN`, `ESP32`, and `ESP32-C6`), the test pipeline includes:
+
+1. **Renode Instruction Emulation**: Executes native Xtensa CPU machine code for the compiled `.elf` binaries (`tools/run_renode.py`).
+2. **Playwright Hardware E2E Suites**: Tests live device REST APIs, actuator toggles, and hardware-specific features:
+   ```powershell
+   # Test all 4 hardware families (34 checks):
+   node scripts/test-playwright/test_bhonofre_hardware.js --emulator
+
+   # Test an isolated target architecture:
+   node scripts/test-playwright/test_bhonofre_hardware.js --mcu=ESP8266-HAN
+   ```
+*(For complete instructions and setup guides, see [Hardware Emulation & Testing](Hardware_Emulation_And_Testing)).*

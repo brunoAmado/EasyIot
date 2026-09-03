@@ -29,6 +29,14 @@ Run these checks to certify that a newly built firmware binary is stable before 
 2. Confirm that the device registers itself and publishes JSON discovery payloads under `homeassistant/binary_sensor/.../config` or `homeassistant/switch/.../config`.
 3. Toggle a physical switch and verify that state changes are published instantly.
 
+### D. Automated Hardware & CloudIO E2E Smoke Tests (Playwright)
+Para automação de testes E2E do portal de instalação e das 4 famílias de placas (`ESP8266`, `ESP8266-HAN`, `ESP32`, `ESP32-C6`):
+```powershell
+# Execução da suite de testes Playwright E2E
+node scripts/test-playwright/test_bhonofre_hardware.js
+```
+*(Para mais detalhes e opções de execução contra dispositivos físicos em LAN ou portal de produção, consulta a secção [Testes E2E de Hardware & Portal Web com Playwright](Hardware_Emulation_And_Testing#4--testes-e2e-de-hardware--portal-web-com-playwright)).*
+
 ---
 
 ## 2. Firmware Recovery & Rollback Procedures
