@@ -8,7 +8,7 @@ from pathlib import Path
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
-RENODE_DIR = ROOT / "renode"
+RENODE_DIR = ROOT / "emulation"
 RESC_FILE = RENODE_DIR / "easyiot_esp32.resc"
 REPL_FILE = RENODE_DIR / "platforms" / "easyiot_esp32.repl"
 ROBOT_FILE = RENODE_DIR / "tests" / "easyiot_boot.robot"

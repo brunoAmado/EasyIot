@@ -15,7 +15,7 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-RENODE_DIR = ROOT / "renode"
+RENODE_DIR = ROOT / "emulation"
 SCRIPT_PATH = RENODE_DIR / "easyiot_esp32.resc"
 ROBOT_TEST_PATH = RENODE_DIR / "tests" / "easyiot_boot.robot"
 

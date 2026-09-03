@@ -60,4 +60,4 @@ jobs:
       if: always()
       with:
         renode-revision: 'master'
-        tests-to-run: 'renode/tests/easyiot_boot.robot'
+        tests-to-run: 'emulation/tests/easyiot_boot.robot'

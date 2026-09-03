@@ -9,9 +9,9 @@ O EasyIot suporta **emulação real de hardware** e **simulação interativa de 
 [Renode](https://renode.io/) é uma framework open-source de emulação de processadores e periféricos (desenvolvida pela Antmicro). Ao contrário de simuladores de alto nível, o Renode executa as **instruções de máquina reais do firmware compilado (.elf)** nos núcleos virtuais Xtensa do ESP32.
 
 ### Ficheiros de Configuração:
-* **[`renode/platforms/easyiot_esp32.repl`](file:///c:/Users/bruno/CLionProjects/EasyIot/renode/platforms/easyiot_esp32.repl):** Descreve o mapeamento de periféricos do EasyIot (relés em GPIO 12 e 14, válvulas de fonte em GPIO 27, 26, 25, 33 e consola UART).
-* **[`renode/easyiot_esp32.resc`](file:///c:/Users/bruno/CLionProjects/EasyIot/renode/easyiot_esp32.resc):** Script de execução que cria a máquina virtual ESP32, carrega o binário PlatformIO `.pio/build/ESP32_DEBUG/firmware.elf` e abre a consola de monitorização série.
-* **[`renode/tests/easyiot_boot.robot`](file:///c:/Users/bruno/CLionProjects/EasyIot/renode/tests/easyiot_boot.robot):** Teste automatizado em Robot Framework para validação contínua em CI/CD.
+* **[`emulation/platforms/easyiot_esp32.repl`](file:///c:/Users/bruno/CLionProjects/EasyIot/emulation/platforms/easyiot_esp32.repl):** Descreve o mapeamento de periféricos do EasyIot (relés em GPIO 12 e 14, válvulas de fonte em GPIO 27, 26, 25, 33 e consola UART).
+* **[`emulation/easyiot_esp32.resc`](file:///c:/Users/bruno/CLionProjects/EasyIot/emulation/easyiot_esp32.resc):** Script de execução que cria a máquina virtual ESP32, carrega o binário PlatformIO `.pio/build/ESP32_DEBUG/firmware.elf` e abre a consola de monitorização série.
+* **[`emulation/tests/easyiot_boot.robot`](file:///c:/Users/bruno/CLionProjects/EasyIot/emulation/tests/easyiot_boot.robot):** Teste automatizado em Robot Framework para validação contínua em CI/CD.
 
 ### Instalação Automática do Renode:
 O EasyIot inclui scripts de instalação automatizada para todas as plataformas:

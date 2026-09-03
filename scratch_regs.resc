@@ -1,5 +1,5 @@
 mach create
-machine LoadPlatformDescription @C:\Users\bruno\CLionProjects\EasyIot\renode\platforms\easyiot_esp32.repl
+machine LoadPlatformDescription @C:\Users\bruno\CLionProjects\EasyIot\emulation\platforms\easyiot_esp32.repl
 
 python """
 import System
