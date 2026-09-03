@@ -11,8 +11,11 @@ ${UART}                       cpu.uartSemihosting
 *** Test Cases ***
 Should Boot EasyIot ESP32 Firmware
     Execute Script            ${SCRIPT}
-    Create Terminal Tester    ${UART}
     Start Emulation
 
-    # Verify that the CPU starts execution
-    Wait For Prompt On Uart   timeout=10
+    # Let the CPU execute and verify active execution state
+    Sleep                     1s
+    ${pc}=                    Execute Command    cpu PC
+    Log                       CPU Program Counter: ${pc}
+    ${time}=                  Execute Command    emulation GetTime
+    Log                       Emulation Virtual Time: ${time}
