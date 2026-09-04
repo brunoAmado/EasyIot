@@ -9,9 +9,30 @@ platformio_override.ini
 /AGENTS.md
 /.agent/
 .vscode
+.gitignore
+.vscode/launch.json
+.vscode/c_cpp_properties.json
+graphify-out/
+.graphifyignore
+
+/run_graphify.ps1
+/run_graphify_update.ps1
+/.env
+.env
+.env.*
+CLAUDE.md
+GEMINI.md
+
 RELEASE_NOTES_DRAFT.md
 
 # Written by the pioarduino platform during the build, not source.
 src/idf_component.yml
 src/idf_component.yml.orig
 /firmware_bins/
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/shelf/
+.idea/**/shelf.xml
+.agents/
+site/
+.ai/
