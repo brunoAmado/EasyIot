@@ -32,6 +32,9 @@ macro reset
 
     # Redirect exception table entry 0x3ffbe400 to panic handler xt_unhandled_exception (0x40084210)
     cpu AddHook 0x3ffbe400 "from Antmicro.Renode.Peripherals.CPU import RegisterValue; cpu.PC = RegisterValue.Create(0x40084210, 32)"
+
+    # Intercept esp_restart_noos (0x40083c24 / 0x40083c40) to prevent infinite panic reset loop
+    cpu AddHook 0x40083c24 "from Antmicro.Renode.Logging import Logger, LogLevel; Logger.Log(LogLevel.Warning, 'ESP32 firmware triggered restart/panic (esp_restart_noos)'); cpu.Pause()"
 """
 
 runMacro $reset

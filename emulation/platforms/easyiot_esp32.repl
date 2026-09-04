@@ -19,6 +19,10 @@ rom: Memory.MappedMemory @ sysbus 0x50000000
 ram: Memory.MappedMemory @ sysbus 0x60000000
     size: 0x8000000
 
+// High MMIO / Dummy Peripheral Address Space (0x80000000 - 0x80FFFFFF, 16 MB)
+high_mmio: Memory.MappedMemory @ sysbus 0x80000000
+    size: 0x1000000
+
 // Xtensa Core (ESP32 LX6 Dual-Core Architecture)
 cpu: CPU.Xtensa @ sysbus
     cpuType: "esp32"
