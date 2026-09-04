@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - master
+      - main
+      - pre-release
+  workflow_dispatch:
 
 permissions:
   contents: write

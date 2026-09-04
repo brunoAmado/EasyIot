@@ -1,6 +1,24 @@
 name: PlatformIO CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+      - main
+      - pre-release
+      - 'feat/**'
+      - 'fix/**'
+      - 'test/**'
+      - 'ci/**'
+      - 'docs/**'
+      - 'chore/**'
+      - 'tools/**'
+  pull_request:
+    branches:
+      - master
+      - main
+      - pre-release
+  workflow_dispatch:
 
 jobs:
   build:
