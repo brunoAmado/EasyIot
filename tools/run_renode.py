@@ -122,10 +122,29 @@ def main() -> int:
         print(f"[OK] PlatformIO binary is ready at: {elf_path}")
         return 0
 
+    if sys.platform == "win32" and "PY_PYTHON" not in os.environ:
+        os.environ["PY_PYTHON"] = "3.11"
+
     print(f"[RENODE] Starting Renode ({renode_bin}) with script: {SCRIPT_PATH}...")
     elf_posix = elf_path.as_posix()
     if args.test:
-        cmd = [renode_bin, "-e", f"$bin=@{elf_posix}", str(ROBOT_TEST_PATH)]
+        renode_base = Path(renode_bin).resolve().parent.parent
+        run_tests_py = renode_base / "tests" / "run_tests.py"
+        robot_css = renode_base / "tests" / "robot.css"
+        bin_dir = Path(renode_bin).resolve().parent
+        py_runner = sys.executable
+
+        if sys.platform == "win32" and run_tests_py.exists():
+            cmd = [
+                py_runner, str(run_tests_py),
+                "--css-file", robot_css.as_posix() if robot_css.exists() else (renode_base / "tests" / "robot.css").as_posix(),
+                "--robot-framework-remote-server-full-directory", bin_dir.as_posix() + "/",
+                "-r", ROOT.as_posix(),
+                "--variable", f"bin:{elf_posix}",
+                str(ROBOT_TEST_PATH)
+            ]
+        else:
+            cmd = [renode_bin, "-e", f"$bin=@{elf_posix}", str(ROBOT_TEST_PATH)]
     else:
         cmd = [renode_bin, "--plain", "-e", f"$bin=@{elf_posix}", str(SCRIPT_PATH)]
 
