@@ -87,6 +87,42 @@ def find_elf_binary(env: str) -> Path | None:
     return None
 
 
+def ensure_robot_dependencies() -> bool:
+    """Ensure robotframework and psutil are installed before running tests."""
+    try:
+        import robot  # noqa: F401
+        import psutil  # noqa: F401
+        return True
+    except ImportError:
+        print("[INFO] Robot Framework test dependencies missing. Installing automatically...")
+        if shutil.which("uv"):
+            cmd = ["uv", "pip", "install", "--python", sys.executable, "robotframework==6.1.1", "psutil>=5.9.3", "pyyaml>=6.0", "telnetlib3>=2.0"]
+            res = subprocess.run(cmd)
+            if res.returncode == 0:
+                print("[OK] Test dependencies installed successfully via uv.")
+                return True
+        cmd = [sys.executable, "-m", "pip", "install", "robotframework==6.1.1", "psutil>=5.9.3", "pyyaml>=6.0", "telnetlib3>=2.0"]
+        res = subprocess.run(cmd)
+        if res.returncode == 0:
+            print("[OK] Test dependencies installed successfully via pip.")
+            return True
+        print("[WARN] Could not automatically install Robot dependencies.")
+        return False
+
+
+def ensure_renode_installed(headless: bool = False) -> str | None:
+    """Check if Renode is installed; if not, attempt automatic installation via install_renode.py."""
+    renode_bin = find_renode_executable(headless=headless)
+    if renode_bin:
+        return renode_bin
+    print("[WARN] Renode executable not found. Running installer (tools/install_renode.py)...")
+    install_script = ROOT / "tools" / "install_renode.py"
+    if install_script.exists():
+        subprocess.run([sys.executable, str(install_script)], cwd=ROOT)
+        renode_bin = find_renode_executable(headless=headless)
+    return renode_bin
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run EasyIot in Renode hardware emulator")
     parser.add_argument("--env", default="ESP32_DEBUG", help="PlatformIO environment to build and run (default: ESP32_DEBUG)")
@@ -98,6 +134,10 @@ def main() -> int:
     # Reconfigure stdout for utf-8 if possible
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
+    # Pre-flight check: ensure Robot Framework packages exist if running tests
+    if args.test:
+        ensure_robot_dependencies()
 
     elf_path = find_elf_binary(args.env)
 
@@ -115,7 +155,7 @@ def main() -> int:
         print(f"[ERROR] Could not find firmware ELF binary in .pio/build/{args.env}/")
         return 1
 
-    renode_bin = find_renode_executable(headless=args.test or args.headless)
+    renode_bin = ensure_renode_installed(headless=args.test or args.headless)
     if not renode_bin:
         print("[WARN] Renode executable was not found on your system PATH or Program Files.")
         print("[INFO] Download & install Renode from: https://github.com/renode/renode/releases")
