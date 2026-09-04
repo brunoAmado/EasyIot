@@ -96,12 +96,12 @@ def ensure_robot_dependencies() -> bool:
     except ImportError:
         print("[INFO] Robot Framework test dependencies missing. Installing automatically...")
         if shutil.which("uv"):
-            cmd = ["uv", "pip", "install", "--python", sys.executable, "robotframework==6.1.1", "psutil>=5.9.3", "pyyaml>=6.0", "telnetlib3>=2.0"]
+            cmd = ["uv", "pip", "install", "--python", sys.executable, "robotframework==6.1.0", "psutil>=5.9.3", "pyyaml>=6.0", "telnetlib3>=2.0"]
             res = subprocess.run(cmd)
             if res.returncode == 0:
                 print("[OK] Test dependencies installed successfully via uv.")
                 return True
-        cmd = [sys.executable, "-m", "pip", "install", "robotframework==6.1.1", "psutil>=5.9.3", "pyyaml>=6.0", "telnetlib3>=2.0"]
+        cmd = [sys.executable, "-m", "pip", "install", "robotframework==6.1.0", "psutil>=5.9.3", "pyyaml>=6.0", "telnetlib3>=2.0"]
         res = subprocess.run(cmd)
         if res.returncode == 0:
             print("[OK] Test dependencies installed successfully via pip.")
