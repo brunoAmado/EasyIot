@@ -1,0 +1,38 @@
+// ==============================================================================
+// 🧠 EasyIot ESP32 Xtensa Dual-Core Machine Platform for Renode
+// Self-contained platform description (Xtensa CPU, RAM, ROM, Flash, GPIO & UART)
+// ==============================================================================
+
+// Full ESP32 Data, Heap, Stack & MMIO Memory Space (0x00000000 - 0x3FFFFFFF, 1 GB)
+data_space: Memory.MappedMemory @ sysbus 0x00000000
+    size: 0x40000000
+
+// Full ESP32 Instruction Memory Space (IRAM, Cache & MMU Flash: 0x40000000 - 0x40FFFFFF, 16 MB)
+inst_space: Memory.MappedMemory @ sysbus 0x40000000
+    size: 0x1000000
+
+// Boot ROM (0x50000000 - 0x53FFFFFF, 64 MB)
+rom: Memory.MappedMemory @ sysbus 0x50000000
+    size: 0x4000000
+
+// Main External RAM (0x60000000 - 0x67FFFFFF, 128 MB)
+ram: Memory.MappedMemory @ sysbus 0x60000000
+    size: 0x8000000
+
+// Xtensa Core (ESP32 LX6 Dual-Core Architecture)
+cpu: CPU.Xtensa @ sysbus
+    cpuType: "esp32"
+    frequency: 240000000
+
+// Semihosting & Serial Monitor
+uartSemihosting: UART.SemihostingUart @ cpu
+
+// ==============================================================================
+// ⛲ EasyIot Peripherals (Relays, Fontaine Valves, LEDs)
+// ==============================================================================
+relay1: Miscellaneous.LED
+relay2: Miscellaneous.LED
+valve_ring_1: Miscellaneous.LED
+valve_ring_2: Miscellaneous.LED
+valve_ring_3: Miscellaneous.LED
+valve_ring_4: Miscellaneous.LED

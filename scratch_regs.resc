@@ -1,0 +1,14 @@
+mach create
+machine LoadPlatformDescription @C:\Users\bruno\CLionProjects\EasyIot\emulation\platforms\easyiot_esp32.repl
+
+python """
+import System
+for p in cpu.GetType().GetProperties():
+    if any(k in p.Name.lower() for k in ['pc', 'ps', 'register', 'window', 'stack']):
+        print('PROP:', p.Name)
+for m in cpu.GetType().GetMethods():
+    if 'register' in m.Name.lower():
+        print('METHOD:', m.Name, [p.ParameterType.Name for p in m.GetParameters()])
+"""
+
+quit
