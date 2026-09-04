@@ -103,26 +103,51 @@ def build_firmware(env: str) -> bool:
     return res.returncode == 0
 
 
+def find_firmware_binary(env: str) -> Path | None:
+    """Find the compiled application firmware binary, handling versioned filenames."""
+    build_dir = ROOT / ".pio" / "build" / env
+    if not build_dir.exists():
+        return None
+    canonical = build_dir / "firmware.bin"
+    if canonical.exists():
+        return canonical
+    candidates = [
+        p for p in build_dir.glob("*.bin")
+        if p.name not in ("bootloader.bin", "partitions.bin", "qemu_flash.bin")
+    ]
+    if candidates:
+        latest = sorted(candidates, key=lambda p: p.stat().st_mtime, reverse=True)[0]
+        try:
+            shutil.copy2(latest, canonical)
+            return canonical
+        except Exception:
+            return latest
+    return None
+
+
 def create_merged_flash_image(env: str) -> Path | None:
     """Merge bootloader, partitions, and app firmware into a unified QEMU flash image."""
     build_dir = ROOT / ".pio" / "build" / env
     bootloader = build_dir / "bootloader.bin"
     partitions = build_dir / "partitions.bin"
-    firmware = build_dir / "firmware.bin"
+    firmware = find_firmware_binary(env)
     output_flash = build_dir / "qemu_flash.bin"
 
-    if not bootloader.exists() or not partitions.exists() or not firmware.exists():
-        log(f"Missing build artifacts in {build_dir}. Bootloader, partitions, or firmware.bin not found.", "red")
+    if not bootloader.exists() or not partitions.exists() or not firmware or not firmware.exists():
+        log(f"Missing build artifacts in {build_dir}. Bootloader, partitions, or firmware binary not found.", "red")
         return None
 
-    log(f"Merging flash binaries into {output_flash.name} (4MB flash)...", "cyan")
+    flash_size_str = "4MB" if "4m" in env.lower() or "qemu" in env.lower() else "8MB"
+    flash_size_bytes = (4 if flash_size_str == "4MB" else 8) * 1024 * 1024
+
+    log(f"Merging flash binaries ({firmware.name}) into {output_flash.name} ({flash_size_str} flash)...", "cyan")
     esptool = find_esptool_cmd()
     cmd = esptool + [
         "--chip", "esp32",
         "merge_bin",
         "-o", str(output_flash),
         "--flash_mode", "dio",
-        "--flash_size", "4MB",
+        "--flash_size", flash_size_str,
         "0x1000", str(bootloader),
         "0x8000", str(partitions),
         "0x10000", str(firmware)
@@ -139,8 +164,7 @@ def create_merged_flash_image(env: str) -> Path | None:
     # Fallback: manual binary concatenation if esptool module is not directly callable
     log("Attempting direct binary padding & merge...", "yellow")
     try:
-        flash_size = 4 * 1024 * 1024  # 4MB
-        flash_data = bytearray([0xFF] * flash_size)
+        flash_data = bytearray([0xFF] * flash_size_bytes)
 
         def write_at(offset: int, filepath: Path) -> None:
             data = filepath.read_bytes()
@@ -151,7 +175,7 @@ def create_merged_flash_image(env: str) -> Path | None:
         write_at(0x10000, firmware)
 
         output_flash.write_bytes(flash_data)
-        log(f"Generated 4MB flash image manually: {output_flash}", "green")
+        log(f"Generated {flash_size_str} flash image manually: {output_flash}", "green")
         return output_flash
     except Exception as e:
         log(f"Manual flash merge failed: {e}", "red")
@@ -163,7 +187,7 @@ def main() -> int:
         sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
     parser = argparse.ArgumentParser(description="Run EasyIot ESP32 in Espressif QEMU with virtual networking")
-    parser.add_argument("--env", default="ESP32_DEBUG", help="PlatformIO environment (default: ESP32_DEBUG)")
+    parser.add_argument("--env", default="ESP32_QEMU", help="PlatformIO environment (default: ESP32_QEMU)")
     parser.add_argument("--port", type=int, default=8080, help="Host HTTP port to forward to ESP32 port 80 (default: 8080)")
     parser.add_argument("--build", action="store_true", help="Force rebuild before launching QEMU")
     parser.add_argument("--install", action="store_true", help="Install Espressif QEMU automatically if missing")
@@ -171,8 +195,9 @@ def main() -> int:
 
     build_dir = ROOT / ".pio" / "build" / args.env
     flash_img = build_dir / "qemu_flash.bin"
+    firmware = find_firmware_binary(args.env)
 
-    if args.build or not flash_img.exists() or not (build_dir / "firmware.bin").exists():
+    if args.build or not flash_img.exists() or not firmware or not firmware.exists():
         if not build_firmware(args.env):
             log(f"Build failed for environment {args.env}", "red")
             return 1
