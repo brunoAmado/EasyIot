@@ -81,6 +81,19 @@ def export_firmware_candidate(target, source, env):
     return 0
 
 
+def make_canonical_elf(target, source, env):
+    elf_path = env.subst("$PROGPATH")
+    build_dir = env.subst("$BUILD_DIR")
+    canonical_elf = os.path.join(build_dir, "firmware.elf")
+    if os.path.isfile(elf_path) and elf_path != canonical_elf:
+        try:
+            import shutil
+            shutil.copy2(elf_path, canonical_elf)
+        except Exception as e:
+            print(f"Warning: could not create canonical firmware.elf: {e}")
+    return 0
+
+
 pioenv = env.get("PIOENV", "")
 if "DEBUG" in pioenv or "RELEASE" in pioenv:
     firmware_binary = env.File(env.subst("$BUILD_DIR/${PROGNAME}.bin"))
@@ -88,4 +101,8 @@ if "DEBUG" in pioenv or "RELEASE" in pioenv:
     env.AddPostAction(
         firmware_binary,
         Action(export_firmware_candidate, "Post-build: local firmware candidate"),
+    )
+    env.AddPostAction(
+        "$PROGPATH",
+        Action(make_canonical_elf, "Post-build: canonical firmware.elf"),
     )
