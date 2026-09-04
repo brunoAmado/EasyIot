@@ -425,6 +425,24 @@ class MockEspHandler(BaseHTTPRequestHandler):
         self.send_json({"result": "ok"})
 
 
+def start_http_server(initial_port: int = 8080) -> tuple[HTTPServer, int, str]:
+    """Create HTTP server trying 127.0.0.1 and 0.0.0.0 with automatic port fallback."""
+    candidate_ports = [initial_port, 8088, 8000, 8888, 3000, 5000]
+    candidate_hosts = ["127.0.0.1", "0.0.0.0"]
+
+    last_err = None
+    for port in candidate_ports:
+        for host in candidate_hosts:
+            try:
+                server = HTTPServer((host, port), MockEspHandler)
+                return server, port, host
+            except (PermissionError, OSError) as e:
+                last_err = e
+                continue
+
+    raise RuntimeError(f"Could not bind to any candidate port: {last_err}")
+
+
 def main() -> None:
     port = 8080
     if len(sys.argv) > 1:
@@ -437,10 +455,12 @@ def main() -> None:
     engine_thread = threading.Thread(target=aquadance_engine_worker, daemon=True)
     engine_thread.start()
 
-    server = HTTPServer(("0.0.0.0", port), MockEspHandler)
+    server, bound_port, bound_host = start_http_server(port)
+    host_display = "localhost" if bound_host in ("127.0.0.1", "0.0.0.0") else bound_host
+
     print("\n" + "=" * 60)
     print(f"🚀 \033[96mEasyIot / AquaDance ESP32/ESP8266 Simulador Online!\033[0m")
-    print(f"🌐 Abra o seu navegador em: \033[92mhttp://localhost:{port}\033[0m")
+    print(f"🌐 Abra o seu navegador em: \033[92mhttp://{host_display}:{bound_port}\033[0m")
     print(f"⛲ Jatos virtuais e focos RGBW carregados e prontos a simular.")
     print("=" * 60 + "\n")
 
