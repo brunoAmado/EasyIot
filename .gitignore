@@ -36,3 +36,8 @@ src/idf_component.yml.orig
 .agents/
 site/
 .ai/
+
+# Renode Robot test outputs
+robot_output.xml
+log.html
+report.html
