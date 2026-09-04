@@ -1,0 +1,44 @@
+# ==============================================================================
+# 🧠 EasyIot ESP32 Hardware Emulation Script for Renode
+# Executes compiled PlatformIO firmware binary in Xtensa machine
+# ==============================================================================
+
+using sysbus
+
+$name?="EasyIot-ESP32"
+mach create $name
+
+# Load self-contained EasyIot ESP32 platform
+machine LoadPlatformDescription $ORIGIN/platforms/easyiot_esp32.repl
+
+# Display serial monitor terminal
+showAnalyzer cpu.uartSemihosting
+
+# Load compiled PlatformIO ELF binary
+$bin?=$ORIGIN/../.pio/build/ESP32_DEBUG/firmware.elf
+
+macro reset
+"""
+    sysbus LoadELF $bin
+    # Initialize Xtensa Windowed Register State (simulating Boot ROM setup)
+    cpu SetRegister "PS" 0x00040020
+    cpu SetRegister "A1" 0x3FFE3E20
+    cpu SetRegister "WINDOWBASE" 0
+    cpu SetRegister "WINDOWSTART" 1
+
+    # Bypass unimplemented F64 coprocessor register probe in Xtensa HAL (restore & save)
+    cpu AddHook 0x40097047 "from Antmicro.Renode.Peripherals.CPU import RegisterValue; cpu.PC = RegisterValue.Create(0x40097054, 32)"
+    cpu AddHook 0x40097085 "from Antmicro.Renode.Peripherals.CPU import RegisterValue; cpu.PC = RegisterValue.Create(0x40097094, 32)"
+
+    # Redirect exception table entry 0x3ffbe400 to panic handler xt_unhandled_exception (0x40084210)
+    cpu AddHook 0x3ffbe400 "from Antmicro.Renode.Peripherals.CPU import RegisterValue; cpu.PC = RegisterValue.Create(0x40084210, 32)"
+"""
+
+runMacro $reset
+
+echo "========================================================="
+echo "⛲ EasyIot ESP32 Hardware Emulation Running!"
+echo "CPU execution started automatically. Press F5 to pause/resume."
+echo "========================================================="
+
+start
