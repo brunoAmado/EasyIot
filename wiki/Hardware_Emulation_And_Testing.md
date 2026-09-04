@@ -1,121 +1,171 @@
-# 🚀 Emulação de Hardware e Testes com Renode
+# 🚀 Emulação de Hardware, Toolchain e Testes do Web Panel
 
-O EasyIot suporta **emulação real de hardware** e **simulação interativa de interface web**, permitindo desenvolver, compilar e testar código sem necessidade de placas físicas ESP32 ou ESP8266 conectadas.
+O EasyIot suporta **emulação real de hardware (instruções de máquina Xtensa)** com **Renode**, **simulação interativa de interface web** via Node.js/Express, e testes ponta-a-ponta (E2E) com **Playwright**, permitindo desenvolver, compilar e validar firmware e interfaces sem necessidade de placas físicas conectadas.
 
 ---
 
-## 1. 🌐 Emulação de Hardware com Renode (Open-Source)
+## 1. 🛠️ Pré-Requisitos e Configuração do Ambiente
 
-[Renode](https://renode.io/) é uma framework open-source de emulação de processadores e periféricos (desenvolvida pela Antmicro). Ao contrário de simuladores de alto nível, o Renode executa as **instruções de máquina reais do firmware compilado (.elf)** nos núcleos virtuais Xtensa do ESP32.
+### A. PlatformIO Core CLI
+Para compilar o firmware via terminal:
+```powershell
+# Instalar / Atualizar o PlatformIO Core via Python 3.11+
+py -3.11 -m pip install -U platformio
 
-### Ficheiros de Configuração:
-* **[`emulation/platforms/easyiot_esp32.repl`](file:///c:/Users/bruno/CLionProjects/EasyIot/emulation/platforms/easyiot_esp32.repl):** Descreve o mapeamento de periféricos do EasyIot (relés em GPIO 12 e 14, válvulas de fonte em GPIO 27, 26, 25, 33 e consola UART).
-* **[`emulation/easyiot_esp32.resc`](file:///c:/Users/bruno/CLionProjects/EasyIot/emulation/easyiot_esp32.resc):** Script de execução que cria a máquina virtual ESP32, carrega o binário PlatformIO `.pio/build/ESP32_DEBUG/firmware.elf` e abre a consola de monitorização série.
-* **[`emulation/tests/easyiot_boot.robot`](file:///c:/Users/bruno/CLionProjects/EasyIot/emulation/tests/easyiot_boot.robot):** Teste automatizado em Robot Framework para validação contínua em CI/CD.
+# Adicionar ao PATH do utilizador (se necessário)
+$currentPath = [Environment]::GetEnvironmentVariable("Path", "User")
+[Environment]::SetEnvironmentVariable("Path", "$currentPath;C:\dev_tools\Python311\Scripts;C:\dev_tools\Python311", "User")
+```
 
-### Instalação Automática do Renode:
-O EasyIot inclui scripts de instalação automatizada para todas as plataformas:
+Verificar a instalação:
+```powershell
+pio --version
+# Output: PlatformIO Core, version 6.x.x
+```
 
-* **Windows (PowerShell):**
+### B. Renode (Emulador de Hardware Open-Source)
+[Renode](https://renode.io/) (desenvolvido pela Antmicro) emula núcleos Xtensa LX6 dual-core e periféricos MMIO a nível de instrução:
+
+* **Windows:**
   ```powershell
-  .\install_renode.ps1
-  # Ou via winget diretamente:
   winget install Renode.Renode
+  # Instalado por defeito em: C:\Program Files\Renode\bin\Renode.exe
   ```
-* **Linux (Ubuntu / Debian / Fedora / Arch):**
+* **Linux (Ubuntu / Debian):**
   ```bash
-  chmod +x install_renode.sh
-  ./install_renode.sh
+  sudo apt-get install renode
   ```
-* **macOS (Homebrew):**
+* **macOS:**
   ```bash
-  ./install_renode.sh
-  # Ou via brew diretamente:
   brew install --cask renode
   ```
 
-### Como Executar Localmente:
-```powershell
-# Compilar e iniciar no emulador Renode com consola série interativa
-.\.venv\Scripts\python tools/run_renode.py --build
+---
 
-# Executar testes automatizados sem interface gráfica
-.\.venv\Scripts\python tools/run_renode.py --test
+## 2. ⚙️ Compilação do Firmware
+
+Antes de iniciar a emulação, compile o binário ELF alvo:
+
+```powershell
+# Compilar versão ESP32 Debug
+pio run -e ESP32_DEBUG
+
+# Compilar versão ESP8266 Debug
+pio run -e ESP8266_DEBUG
 ```
+
+O binário gerado para a emulação fica localizado em:
+📂 `.pio/build/ESP32_DEBUG/firmware.elf`
 
 ---
 
-## 2. 🖥️ Simulador Web Interativo (Python Mock Server)
+## 3. 🧠 Emulação de Hardware ESP32 com Renode
 
-Para desenvolvimento rápido de interfaces web, painéis de controlo e testes do AquaDance:
+### Ficheiros de Configuração:
+* **[`emulation/platforms/easyiot_esp32.repl`](file:///c:/Users/bruno/CLionProjects/EasyIot/emulation/platforms/easyiot_esp32.repl):**
+  * Define o CPU Xtensa LX6 dual-core (`240 MHz`).
+  * Mapeamento de memória:
+    * `data_space`: `0x00000000 - 0x3FFFFFFF` (1 GB)
+    * `inst_space`: `0x40000000 - 0x40FFFFFF` (16 MB - IRAM / Flash Cache)
+    * `rom`: `0x50000000 - 0x53FFFFFF` (64 MB)
+    * `ram`: `0x60000000 - 0x67FFFFFF` (128 MB)
+    * `high_mmio`: `0x80000000 - 0x80FFFFFF` (16 MB - absorve acessos de registos WDT/MMIO)
+  * Periféricos: LEDs virtuais para `relay1`, `relay2`, `valve_ring_1` a `valve_ring_4`, e `uartSemihosting`.
+* **[`emulation/easyiot_esp32.resc`](file:///c:/Users/bruno/CLionProjects/EasyIot/emulation/easyiot_esp32.resc):**
+  * Inicializa registos de arranque Xtensa (`PS`, `A1`, `WINDOWBASE`, `WINDOWSTART`).
+  * Ignora sondagem de coprocessador F64 inexistente no HAL Xtensa.
+  * Interceta handlers de pânico e reinicialização (`esp_restart_noos`).
+* **[`emulation/tests/easyiot_boot.robot`](file:///c:/Users/bruno/CLionProjects/EasyIot/emulation/tests/easyiot_boot.robot):**
+  * Suite de testes automatizados em Robot Framework.
 
+### Como Executar o Emulador:
+
+#### Modo Interativo com Consola Gráfica e UART Semihosting:
 ```powershell
-.\.venv\Scripts\python tools/esp_simulator.py
+& "C:\Program Files\Renode\bin\Renode.exe" emulation/easyiot_esp32.resc
 ```
 
-* Abre um servidor local em **`http://localhost:8080`**.
-* Serve a interface `webpanel/` real e emula todos os endpoints REST (`/config`, `/state`, `/aquadance`, `/control`) e Server-Sent Events (SSE).
-* Permite compor partituras musicais e testar o **Simulador 2D do Lago** sem tempos de compilação C++.
+#### Modo Linha de Comandos (Headless):
+```powershell
+& "C:\Program Files\Renode\bin\Renode.exe" --plain -e "include @emulation/easyiot_esp32.resc; start"
+```
+
+#### Comandos Úteis na Consola do Renode (`monitor`):
+```text
+(monitor) cpu PC                      # Consulta o Program Counter atual
+(monitor) cpu ExecutedInstructions   # Número de instruções de máquina executadas
+(monitor) currentTime                 # Tempo decorrido de emulação
+(monitor) relay1 State                # Estado do relé 1 (True / False)
+(monitor) valve_ring_1 State          # Estado da válvula da fonte
+(monitor) pause                       # Pausa a execução do CPU
+(monitor) start                       # Retoma a execução
+(monitor) runMacro $reset             # Faz reset à máquina e recarrega o ELF
+```
+
+### Diagnóstico de Avisos Sysbus no Renode:
+Se o firmware aceder a endereços de periféricos durante rotinas de Watchdog Timer ou reinicialização (`esp_restart_noos`):
+* `0x4009471A` escreve `0x50D83AA1` (`TIMG_WDT_WKEY_VALUE` de desbloqueio de escrita WDT).
+* `0x40094796` / `0x4009479F` desativam o watchdog antes do reboot.
+* O mapeamento `high_mmio` no ficheiro `.repl` absorve estes acessos sem gerar erros de periférico inexistente.
+* O hook em `0x40083c24` interceta o reboot suave para evitar loops infinitos de pânico.
 
 ---
 
-## 3. 🤖 Integração Contínua em GitHub Actions (CI)
+## 4. 🌐 Como Iniciar e Testar o Web Panel
 
-O workflow de CI ([`.github/workflows/ci.yml`](file:///c:/Users/bruno/CLionProjects/EasyIot/.github/workflows/ci.yml)) executa automaticamente:
+O Renode emula a execução das instruções do CPU, mas não emula a camada física rádio 802.11 Wi-Fi proprietária do ESP32. Para testar o **Web Panel** e as APIs REST, o projeto fornece um servidor mock integrado de alta fidelidade:
 
-1. **Validação de Sintaxe:** Verificação de scripts Python e código JavaScript.
-2. **Minificação de Assets Web:** Compilação do painel web para ficheiros PROGMEM (`include/IndexHtml.h`, etc.).
-3. **Compilação Cruzada:** `pio run -e ESP8266_DEBUG` e `pio run -e ESP32_DEBUG`.
-4. **Testes Unitários:** Execução de testes de contrato e regras de negócio.
-5. **Emulação de Hardware Renode:** `antmicro/renode-test-action@v5` testa o arranque do firmware na máquina virtual ESP32.
+### A. Servidor Mock Interativo (Node.js / Express)
+
+Inicia o servidor web local servindo o frontend [`webpanel/`](file:///c:/Users/bruno/CLionProjects/EasyIot/webpanel) com todos os endpoints REST do firmware simulados (`/config`, `/state`, `/save`, `/scan`, `/firmware`, etc.):
+
+```powershell
+node -e "require('./web-tests/mock-server.js').startServer(3000)"
+```
+
+Aceda no navegador em:
+👉 **[http://localhost:3000](http://localhost:3000)**
+
+### B. Testes Automatizados E2E do Web Panel (Playwright)
+
+Para executar a validação completa de interface e componentes gráficos (Radar Studio, AquaDance, Rega, Diagnósticos):
+
+```powershell
+cd web-tests
+
+# Executar todos os testes
+npm test
+
+# Executar testes de componentes específicos
+npm run test:radar        # Radar Studio UI & Canvas
+npm run test:aquadance    # AquaDance Show Matrix
+npm run test:irrigation   # Agendador de Rega
+npm run test:diagnostics  # Painel de Diagnóstico do Sistema
+npm run test:resiliency   # Resiliência de rede e timeouts
+```
+
+### C. Conversão e Minificação de Assets Web para C++ PROGMEM
+
+Sempre que modificar ficheiros em `webpanel/` (`index.html`, `css/styles.css`, `js/index.js`), converta-os em cabeçalhos C++ embebidos antes de compilar o firmware:
+
+```powershell
+python tools/html_converter.py
+```
+*(Gera os ficheiros `include/IndexHtml.h`, `include/StylesMinCss.h` e `include/IndexJs.h`)*
 
 ---
 
-## 4. 🎭 Testes E2E de Hardware & Portal Web com Playwright
+## 5. 🔌 Execução em Hardware Físico Real
 
-O EasyIot e o ecossistema BHonofre contam com uma suite de testes End-to-End (E2E) com **Playwright** para validar o portal de gravação web ([CloudIO Flasher](https://cloudio.bhonofre.pt/flash/)) e os fluxos de firmware para todos os 4 modelos de hardware oficiais.
+Ao carregar o firmware numa placa real (OnOfre V5/V6, ESP32, ESP8266):
 
-### Ficheiro de Teste:
-* **`scripts/test-playwright/test_bhonofre_hardware.js`**
-
-### Modos de Execução:
-
-#### **Modo A: Simulação Local / Pipeline CI (Default)**
-Inicia um servidor mock interno na porta `8989` que espelha as APIs do portal CloudIO (`/firmware/all-versions/:mcu` e `/firmware/webflash/:mcu/manifest.json`):
-```powershell
-# Execução direta com Node.js
-node scripts/test-playwright/test_bhonofre_hardware.js
-
-# Ou via npm:
-cd scripts/test-playwright
-npm run test:bhonofre
-```
-
-#### **Modo B: Validação com Dispositivo Físico / IP Local**
-Permite apontar os testes para um módulo BHonofre em execução na rede local:
-```powershell
-# Windows (PowerShell)
-$env:BHONOFRE_URL="http://192.168.1.185"; node scripts/test-playwright/test_bhonofre_hardware.js
-
-# Linux / macOS (Bash)
-BHONOFRE_URL="http://192.168.1.185" node scripts/test-playwright/test_bhonofre_hardware.js
-```
-
-#### **Modo C: Validação contra o Portal CloudIO em Produção**
-Executa os testes diretamente contra o portal oficial `https://cloudio.bhonofre.pt/flash/`:
-```powershell
-# Windows (PowerShell)
-$env:BHONOFRE_URL="https://cloudio.bhonofre.pt/flash/"; node scripts/test-playwright/test_bhonofre_hardware.js
-
-# Linux / macOS (Bash)
-BHONOFRE_URL="https://cloudio.bhonofre.pt/flash/" node scripts/test-playwright/test_bhonofre_hardware.js
-```
-
-#### **Modo D: Emulador de Hardware Interativo & Suites Específicas por MCU**
-Inicia e valida um emulador interativo do dispositivo OnOfre / EasyIot (porta `8080`), executando verificações especializadas para cada arquitetura de hardware:
-```powershell
-# Executar a suite completa para todas as 4 arquiteturas de hardware:
-node scripts/test-playwright/test_bhonofre_hardware.js --emulator
+1. **Modo Estação (Conectado ao Wi-Fi):**
+   * O dispositivo conecta-se à rede configurada e fica acessível em `http://<ip-do-dispositivo>` ou `http://<nodeId>.local`.
+2. **Modo Ponto de Acesso / Captive Portal:**
+   * Se não houver rede configurada, o dispositivo cria o AP `EasyIot-XXXXXX` (ou `ONOFRE_XXXXXX`).
+   * Password AP: `bhonofre`
+   * Aceder a: `http://192.168.4.1`
+   * Credenciais por defeito do Web Panel: `admin` / `xpto`
 
 # Executar especificamente para um modelo de hardware isolado:
 node scripts/test-playwright/test_bhonofre_hardware.js --mcu=ESP8266      # OnOfre V5
