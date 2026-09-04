@@ -35,10 +35,15 @@ pio --version
   ```bash
   sudo apt-get install renode
   ```
-* **macOS:**
-  ```bash
-  brew install --cask renode
-  ```
+### C. Espressif QEMU (Emulador Oficial com Rede Virtual OpenETH)
+Para emulação completa de binários com suporte a tráfego web/TCP/IP real:
+```powershell
+# Instalação automatizada do Espressif QEMU
+.\install_qemu.ps1
+
+# Compilar e iniciar QEMU com encaminhamento para http://localhost:8080
+py -3.11 tools/run_qemu.py --build
+```
 
 ---
 
