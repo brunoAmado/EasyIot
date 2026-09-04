@@ -487,8 +487,9 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .dance-th-step.measure-start { border-left: 2px solid var(--dim); font-weight: 700; color: var(--txt); }
 .dance-th-step.playhead { background: var(--grn); color: #000; font-weight: 800; border-radius: 3px 3px 0 0; }
 
-.dance-td-valve { display: table-cell; font-size: 11.5px; font-weight: 600; color: var(--txt); padding: 6px 8px; white-space: nowrap; vertical-align: middle; }
-.dance-cell { display: table-cell; min-width: 22px; width: 22px; height: 26px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; transition: background .1s, transform .05s, box-shadow .1s; }
+.dance-td-valve { display: table-cell; font-size: 11.5px; font-weight: 600; color: var(--txt); padding: 3px 8px; white-space: nowrap; vertical-align: middle; }
+.dance-td-valve svg { width: 14px; height: 14px; vertical-align: -2px; margin-right: 5px; display: inline-block; color: var(--blu); }
+.dance-cell { display: table-cell; min-width: 22px; width: 22px; height: 22px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; cursor: pointer; transition: background .1s, transform .05s, box-shadow .1s; }
 .dance-cell:hover { border-color: var(--blu); transform: scale(1.08); z-index: 2; }
 .dance-cell.on { background: #00d2ff; border-color: #00e5ff; box-shadow: 0 0 8px rgba(0, 210, 255, 0.6); }
 .dance-cell.measure-start { border-left: 2px solid var(--line); }
@@ -505,7 +506,7 @@ input[type=range] { width: 100%; margin-top: 7px; accent-color: var(--grn); }
 .dance-swatch.selected { border-color: #fff; box-shadow: 0 0 8px rgba(255,255,255,0.8); transform: scale(1.15); }
 
 /* Dimmer cell indicator */
-.dance-cell.dimmer-cell { font-size: 8.5px; text-align: center; line-height: 24px; font-weight: 700; color: #000; }
+.dance-cell.dimmer-cell { font-size: 8.5px; text-align: center; line-height: 20px; font-weight: 700; color: #000; }
 .dance-cell.dimmer-cell.on { background: #ffcc00; border-color: #ffe066; box-shadow: 0 0 8px rgba(255, 204, 0, 0.6); }
 
 /* 2D Pool Visualizer */

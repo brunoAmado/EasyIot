@@ -3180,7 +3180,7 @@ document.addEventListener("click", (ev) => {
   if (del) {
     if (!armed(del, "Confirmar?")) return;
     removed.push(del.dataset.del);
-    config.features = (config.features || []).filter((f) => f.id !== del.dataset.del);
+    config.features = (config.features || []).filter((f) => String(f.id) !== String(del.dataset.del));
     renderFeatures(); renderOverview(); renderPinout(); markDirty();
     return;
   }

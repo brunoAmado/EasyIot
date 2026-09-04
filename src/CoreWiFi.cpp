@@ -548,6 +548,14 @@ void beginBleProvison()
 #endif
 void setupWiFi()
 {
+#if defined(QEMU_EMULATION)
+#ifdef DEBUG_ONOFRE
+  Log.notice("%s Running in QEMU virtual networking mode" CR, tags::wifi);
+#endif
+  setupWebPanel();
+  startWebserver();
+  return;
+#endif
 #if defined(ESP8266) || defined(LEGACY_PROVISON)
   // Bring the radio up before touching it. setSleep() was the first WiFi call in
   // this function, so the driver did not exist yet and it did nothing — modem
@@ -578,6 +586,9 @@ void setupWiFi()
 
 void loopWiFi()
 {
+#if defined(QEMU_EMULATION)
+  return;
+#endif
 
 #if defined(ESP32) && !defined(LEGACY_PROVISON)
   // Complete any provisioning write/save that could not acquire from the ESP

@@ -35,7 +35,13 @@ WEBPANEL_DIR = ROOT / "webpanel"
 SIMULATED_CONFIG = {
     "chipId": "ESP-SIM-9988",
     "nodeId": "OnOfre Simulador",
+    "mcu": "ESP32",
     "firmware": "EasyIot v9.199-SIM",
+    "usablePins": [0, 1, 2, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 32, 33],
+    "inputOnlyPins": [34, 35, 36, 37, 38, 39],
+    "outInPins": [0, 1, 2, 3, 4, 5, 7, 8, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 25, 26, 27, 32, 33],
+    "freeHeap": 184500,
+    "uptime": 3600,
     "wifi": {
         "ssid": "Simulated_WiFi_5G",
         "ip": "192.168.1.150",
@@ -416,13 +422,70 @@ class MockEspHandler(BaseHTTPRequestHandler):
             self.send_json({"result": "ok", "features": SIMULATED_CONFIG["features"]})
             return
 
+        if path in ("/features", "/api/features"):
+            driver_val = int(body.get("driver", 0))
+            driver_name = DRIVER_MAP.get(driver_val, f"DRIVER_{driver_val}")
+            inputs = []
+            if "input1" in body and body["input1"] is not None:
+                try:
+                    inputs.append(int(body["input1"]))
+                except (ValueError, TypeError):
+                    pass
+            if "input2" in body and body["input2"] is not None:
+                try:
+                    inputs.append(int(body["input2"]))
+                except (ValueError, TypeError):
+                    pass
+            new_feat = {
+                "id": f"feat_{int(time.time()*1000) % 100000}",
+                "name": body.get("name", "Nova Função"),
+                "driver": driver_name,
+                "state": 0,
+                "inputs": inputs,
+                "outputs": []
+            }
+            SIMULATED_CONFIG["features"].append(new_feat)
+            print(f"\033[92m[Simulador] Criada função: {new_feat['name']} ({driver_name}) nos pinos {inputs}\033[0m")
+            self.send_json(SIMULATED_CONFIG)
+            return
+
         if path in ("/config", "/api/config"):
+            if "featuresToRemove" in body:
+                to_remove = set(str(x) for x in body["featuresToRemove"])
+                SIMULATED_CONFIG["features"] = [f for f in SIMULATED_CONFIG["features"] if str(f.get("id")) not in to_remove]
+                del body["featuresToRemove"]
             SIMULATED_CONFIG.update(body)
             print("\033[92m[Simulador] Configuração geral atualizada.\033[0m")
             self.send_json(SIMULATED_CONFIG)
             return
 
         self.send_json({"result": "ok"})
+
+    def do_DELETE(self) -> None:
+        parsed = urlparse(self.path)
+        path = parsed.path
+        length = int(self.headers.get("Content-Length", 0))
+        body_bytes = self.rfile.read(length) if length > 0 else b"{}"
+        try:
+            body = json.loads(body_bytes.decode("utf-8")) if body_bytes else {}
+        except Exception:
+            body = {}
+        if path in ("/features", "/api/features"):
+            feat_id = body.get("id")
+            SIMULATED_CONFIG["features"] = [f for f in SIMULATED_CONFIG["features"] if f.get("id") != feat_id]
+            print(f"\033[93m[Simulador] Removida função ID: {feat_id}\033[0m")
+            self.send_json(SIMULATED_CONFIG)
+            return
+        self.send_json({"result": "ok"})
+
+
+DRIVER_MAP = {
+    1: "SWITCH_PUSH", 2: "SWITCH_LATCH", 7: "LIGHT_PUSH", 8: "LIGHT_LATCH",
+    9: "GARAGE_PUSH", 10: "GARDEN_VALVE", 3: "COVER_SINGLE_PUSH", 4: "COVER_DUAL_PUSH",
+    5: "COVER_DUAL_LATCH", 71: "DHT_11", 72: "DHT_22", 82: "PIR", 83: "RAIN",
+    84: "DOOR", 85: "WINDOW", 90: "DS18B20", 93: "HCSR04", 94: "LD2410",
+    95: "LDC1612", 96: "LD2450", 97: "LD2460", 111: "DHT_11", 121: "DHT_21", 122: "DHT_22"
+}
 
 
 def start_http_server(initial_port: int = 8080) -> tuple[HTTPServer, int, str]:
