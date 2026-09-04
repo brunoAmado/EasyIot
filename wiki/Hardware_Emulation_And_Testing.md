@@ -107,11 +107,26 @@ Se o firmware aceder a endereços de periféricos durante rotinas de Watchdog Ti
 * `0x4009471A` escreve `0x50D83AA1` (`TIMG_WDT_WKEY_VALUE` de desbloqueio de escrita WDT).
 * `0x40094796` / `0x4009479F` desativam o watchdog antes do reboot.
 * O mapeamento `high_mmio` no ficheiro `.repl` absorve estes acessos sem gerar erros de periférico inexistente.
-* O hook em `0x40083c24` interceta o reboot suave para evitar loops infinitos de pânico.
+### D. Deteção da Instalação do Renode no Windows:
+Caso seja necessário verificar os caminhos do executável no PowerShell:
+```powershell
+Get-ChildItem "C:\Program Files\Renode" | Select-Object Name
+Get-ChildItem "C:\Program Files\Renode\bin\*.exe" | Select-Object Name
+```
 
 ---
 
-## 4. 🌐 Como Iniciar e Testar o Web Panel
+## 4. 🌐 Comparativo: Emulação de Hardware vs Web vs Dispositivo Físico
+
+| Ferramenta / Ambiente | Âmbito de Execução | Suporte de Rede e Web |
+| :--- | :--- | :--- |
+| **Renode** (Emulador de Hardware) | Arquitetura de CPU (Xtensa LX6), registos de máquina, mapeamento de memória MMIO, GPIO, relés, UART semihosting, timers. | Emulação de instruções do CPU e MMIO. *(A camada física rádio Wi-Fi 802.11 proprietária do ESP32 não é emulada no Renode).* |
+| **Web Panel Mock Server** (Node.js/Express) | Painel Web (`webpanel/`), endpoints REST dinâmicos (`/config`, `/state`, `/save`, `/scan`, `/firmware`, etc.). | Servidor Web HTTP completo em `http://localhost:3000` via `node -e "require('./web-tests/mock-server.js').startServer(3000)"`. |
+| **Dispositivo Físico ESP32** | Placa de silício real, rádio Wi-Fi, GPIOs de hardware físico, medição de potência. | Wi-Fi nativo + AsyncWebServer (Modo Estação ou AP / Captive Portal em `http://192.168.4.1`). |
+
+---
+
+## 5. 🌐 Como Iniciar e Testar o Web Panel
 
 O Renode emula a execução das instruções do CPU, mas não emula a camada física rádio 802.11 Wi-Fi proprietária do ESP32. Para testar o **Web Panel** e as APIs REST, o projeto fornece um servidor mock integrado de alta fidelidade:
 
@@ -155,7 +170,7 @@ python tools/html_converter.py
 
 ---
 
-## 5. 🔌 Execução em Hardware Físico Real
+## 6. 🔌 Execução em Hardware Físico Real
 
 Ao carregar o firmware numa placa real (OnOfre V5/V6, ESP32, ESP8266):
 
@@ -166,6 +181,14 @@ Ao carregar o firmware numa placa real (OnOfre V5/V6, ESP32, ESP8266):
    * Password AP: `bhonofre`
    * Aceder a: `http://192.168.4.1`
    * Credenciais por defeito do Web Panel: `admin` / `xpto`
+
+---
+
+## 7. 🎭 Testes E2E de Hardware com Playwright por Modelo de MCU
+
+```powershell
+# Executar a suite completa para todas as 4 arquiteturas de hardware:
+node scripts/test-playwright/test_bhonofre_hardware.js --emulator
 
 # Executar especificamente para um modelo de hardware isolado:
 node scripts/test-playwright/test_bhonofre_hardware.js --mcu=ESP8266      # OnOfre V5
