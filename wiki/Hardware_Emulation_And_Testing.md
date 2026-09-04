@@ -90,16 +90,15 @@ O binário gerado para a emulação fica localizado em:
 & "C:\Program Files\Renode\bin\Renode.exe" --plain -e "include @emulation/easyiot_esp32.resc; start"
 ```
 
-#### Comandos Úteis na Consola do Renode (`monitor`):
+#### Comandos Verificados na Consola do Renode (`monitor` / Renode 1.16):
 ```text
-(monitor) cpu PC                      # Consulta o Program Counter atual
-(monitor) cpu ExecutedInstructions   # Número de instruções de máquina executadas
-(monitor) currentTime                 # Tempo decorrido de emulação
-(monitor) relay1 State                # Estado do relé 1 (True / False)
-(monitor) valve_ring_1 State          # Estado da válvula da fonte
-(monitor) pause                       # Pausa a execução do CPU
-(monitor) start                       # Retoma a execução
-(monitor) runMacro $reset             # Faz reset à máquina e recarrega o ELF
+cpu PC                        # Consulta o Program Counter atual (ex: 0x40097094)
+cpu ExecutedInstructions     # Total de instruções de máquina executadas
+emulation GetTimeSourceInfo   # Informação detalhada do tempo virtual decorrido
+showPeripherals               # Lista todos os periféricos registados na máquina
+pause                         # Pausa a execução do CPU (ou tecla F5)
+start                         # Retoma a execução do CPU
+runMacro $reset               # Faz reset à máquina e recarrega o ELF
 ```
 
 ### Diagnóstico de Avisos Sysbus no Renode:
