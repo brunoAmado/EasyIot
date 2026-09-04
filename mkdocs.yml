@@ -1,0 +1,62 @@
+site_name: "EasyIot Documentation"
+site_description: "Beautiful, developer-friendly documentation for the EasyIot ESP8266/ESP32 firmware."
+site_author: "Bruno Horta"
+repo_name: "brunoAmado/EasyIot"
+repo_url: "https://github.com/brunoAmado/EasyIot"
+
+docs_dir: "wiki"
+site_dir: "site"
+
+theme:
+  name: "material"
+  palette:
+    - media: "(prefers-color-scheme: dark)"
+      scheme: "slate"
+      primary: "indigo"
+      accent: "indigo"
+      toggle:
+        icon: "material/weather-sunny"
+        name: "Switch to light mode"
+    - media: "(prefers-color-scheme: light)"
+      scheme: "default"
+      primary: "indigo"
+      accent: "indigo"
+      toggle:
+        icon: "material/weather-night"
+        name: "Switch to dark mode"
+  features:
+    - "navigation.tabs"
+    - "navigation.top"
+    - "navigation.sections"
+    - "search.suggest"
+    - "search.highlight"
+    - "content.code.copy"
+    - "content.tooltips"
+
+markdown_extensions:
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji
+
+nav:
+  - Welcome: Home.md
+  - Getting Started:
+    - How to Build and Configure: How_To_Build_And_Configure.md
+  - User Guide:
+    - General Manual: User_Guide.md
+    - AquaDance & Musical Fountain: AquaDance_Fontaine_Matrix.md
+  - Web Interface Guide: Web_Interface_Guide.md
+  - Developer Guide:
+    - Developer Manual: Developer_Guide.md
+    - Hardware Emulation & Renode: Hardware_Emulation_And_Testing.md
+    - Code Graph Index: index.md
+  - Troubleshooting & Recovery: Troubleshooting_And_Smoke_Tests.md
