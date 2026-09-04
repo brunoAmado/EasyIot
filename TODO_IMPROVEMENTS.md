@@ -118,11 +118,36 @@
 ## Security
 
 1. [x] Stopped logging credential values in debug output (`src/CoreWiFi.cpp`, `src/ConfigOnofre.cpp`).
+2. [x] Validated OTA update flow over HTTPS on ESP32 (`Update Success` + reboot + reconnect to CloudIO/MQTT; `HTTPS result: 200`, `fallback=0`). File: `src/WebServer.cpp`
+3. [x] Converted state-changing endpoints to support `POST` (`/reboot`, `/load-defaults`, `/templates/change`) and switched webpanel calls to `POST` while keeping temporary `GET` compatibility. Files: `src/WebServer.cpp`, `webpanel/js/index.js`
+4. [x] Implemented HTTPS-first config sync for CloudIO with silent HTTP fallback after 3 retries. File: `src/CloudIO.cpp`
+5. [x] Hardened captive portal Wi-Fi configuration flow to submit SSID and password via `POST` body instead of `GET` query parameters. Files: `include/CaptivePortal.h`, `src/WebServer.cpp`
 
 ## Webpanel
 
 1. [x] Fixed firmware version comparison for `-dev` formats (replaced `parseFloat` logic). File: `webpanel/js/index.js`
 2. [x] Removed hardcoded `baseUrl` and switched to same-origin requests. File: `webpanel/js/index.js`
+3. [x] Added automatic firmware version display in webpanel footer (`version_lbl` from `/config`). Files: `webpanel/index.html`, `webpanel/js/index.js`
+4. [x] Added firmware build date to `/config` API payload and system log output. Files: `src/ConfigOnofre.cpp`, `src/WebServer.cpp`
+5. [x] Prototyped a native non-blocking `LIGHT_DIMMER` actuator driver with push-button hold-to-dim logic, PWM outputs, and web panel range slider integration. Files: `include/Actuatores.h`, `src/Actuatores.cpp`, `webpanel/js/index.js`
+
+## Code Quality
+
+1. [x] Replaced deprecated ArduinoJson `containsKey()` checks in config update path with `isNull()` guards. File: `src/ConfigOnofre.cpp`
+2. [x] Added explicit ESP8266 no-op switch cases for ESP32-only sensor drivers (`TMF882X`, `LD2410`, `LD2450`, `LD2460`) to remove compiler switch warnings. File: `src/Sensors.cpp`
+
+## Process & Release
+
+1. [x] Added PR workflow guide (development -> cherry-pick branch -> upstream PR). File: `docs/RELEASE_WORKFLOW.md`
+2. [x] Added branch naming convention for external CP branches. File: `docs/RELEASE_WORKFLOW.md`
+3. [x] Added release checklist document in repo docs. File: `docs/RELEASE_WORKFLOW.md`
+4. [x] Added script to generate release notes draft from commits. File: `tools/generate_release_notes.sh`
+
+## Testing & CI
+
+1. [x] Added GitHub Actions CI build checks for main environments (ESP8266 + ESP32) to compile on pull request or push. File: `.github/workflows/ci.yml`
+2. [x] Added smoke testing manual verification checklist covering boot diagnostics, Wi-Fi, MQTT, and OTA paths. File: `docs/smoke_test_guide.md`
+3. [x] Added quick rollback recovery notes and esptool wipe instructions for failed release/update. File: `docs/ROLLBACK_NOTES.md`
 ## Quick Release Flow
 
 1. Bump version in `platformio.ini`.
