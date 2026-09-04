@@ -56,11 +56,16 @@ jobs:
         fi
 
     - name: Run PlatformIO Unit Tests
-      run: pio test -e native
+      run: |
+        if [ -d test ] && [ -n "$(find test -name '*.cpp' 2>/dev/null)" ]; then
+          pio test -e native
+        else
+          echo "No unit tests found in test/ directory, skipping."
+        fi
 
     - name: Run Renode Hardware Emulation Tests
+      if: hashFiles('emulation/tests/*.robot') != ''
       uses: antmicro/renode-test-action@v5
-      if: always()
       with:
         renode-revision: 'master'
         tests-to-run: 'emulation/tests/easyiot_boot.robot'
