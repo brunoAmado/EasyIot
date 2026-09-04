@@ -26,8 +26,9 @@ macro reset
     cpu SetRegister "WINDOWBASE" 0
     cpu SetRegister "WINDOWSTART" 1
 
-    # Bypass unimplemented F64 coprocessor register probe in Xtensa HAL
-    cpu AddHook 0x40097085 "from Antmicro.Renode.Peripherals.CPU import RegisterValue; cpu.PC = RegisterValue.Create(0x40097088, 32)"
+    # Bypass unimplemented F64 coprocessor register probe in Xtensa HAL (restore & save)
+    cpu AddHook 0x40097047 "from Antmicro.Renode.Peripherals.CPU import RegisterValue; cpu.PC = RegisterValue.Create(0x40097054, 32)"
+    cpu AddHook 0x40097085 "from Antmicro.Renode.Peripherals.CPU import RegisterValue; cpu.PC = RegisterValue.Create(0x40097094, 32)"
 """
 
 runMacro $reset

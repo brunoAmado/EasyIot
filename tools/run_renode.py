@@ -31,16 +31,19 @@ def find_renode_executable(headless: bool = False) -> str | None:
         return found
 
     # 2. Check standard Windows installation paths
-    win_paths = [
-        Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Renode" / "bin" / (cmd_name + ".exe"),
-        Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Renode" / "renode.exe",
-        Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Renode" / "bin" / (cmd_name + ".exe"),
-        Path(os.environ.get("LOCALAPPDATA", r"C:\Users\Default\AppData\Local")) / "Programs" / "Renode" / "renode.exe",
-        Path(os.environ.get("USERPROFILE", r"C:\Users\Default")) / "renode" / "renode.exe",
-    ]
-    for p in win_paths:
-        if p.exists():
-            return str(p)
+    exts = [".bat", ".exe", ""] if sys.platform == "win32" else [""]
+    for ext in exts:
+        win_candidates = [
+            Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Renode" / "bin" / (cmd_name + ext),
+            Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Renode" / ("Renode" + ext),
+            Path(os.environ.get("ProgramFiles", r"C:\Program Files")) / "Renode" / "bin" / ("Renode" + ext),
+            Path(os.environ.get("ProgramFiles(x86)", r"C:\Program Files (x86)")) / "Renode" / "bin" / (cmd_name + ext),
+            Path(os.environ.get("LOCALAPPDATA", r"C:\Users\Default\AppData\Local")) / "Programs" / "Renode" / ("Renode" + ext),
+            Path(os.environ.get("USERPROFILE", r"C:\Users\Default")) / "renode" / ("Renode" + ext),
+        ]
+        for p in win_candidates:
+            if p.exists():
+                return str(p)
 
     # 3. Check standard Linux/Unix paths
     unix_paths = [
