@@ -1,0 +1,89 @@
+name: PlatformIO CI
+
+on:
+  push:
+    branches:
+      - master
+      - main
+      - pre-release
+      - 'feat/**'
+      - 'fix/**'
+      - 'test/**'
+      - 'ci/**'
+      - 'docs/**'
+      - 'chore/**'
+      - 'tools/**'
+  pull_request:
+    branches:
+      - master
+      - main
+      - pre-release
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+
+    - name: Install Minifiers globally
+      run: npm install -g html-minifier uglify-js uglifycss
+
+    - name: Cache PlatformIO
+      uses: actions/cache@v4
+      with:
+        path: |
+          ~/.platformio
+          ~/.cache/pip
+        key: ${{ runner.os }}-platformio-${{ hashFiles('**/platformio.ini') }}
+
+    - name: Install PlatformIO
+      run: |
+        python -m pip install --upgrade pip
+        pip install platformio esptool
+
+    - name: Build Web Panel Assets
+      run: |
+        if [ -f tools/build_webpanel.py ]; then
+          python tools/build_webpanel.py
+        else
+          bash tools/html_converter.sh
+        fi
+
+    - name: Run PlatformIO Compilation Checks
+      run: |
+        pio run -e ESP8266_DEBUG
+        pio run -e ESP32_DEBUG
+        if [ -d .pio/build/ESP32_DEBUG ] && [ ! -f .pio/build/ESP32_DEBUG/firmware.elf ]; then
+          latest_elf=$(ls -t .pio/build/ESP32_DEBUG/*.elf 2>/dev/null | head -n 1)
+          if [ -n "$latest_elf" ]; then
+            cp "$latest_elf" .pio/build/ESP32_DEBUG/firmware.elf
+          fi
+        fi
+
+    - name: Run PlatformIO Unit Tests
+      run: |
+        if [ -d test ] && [ -n "$(find test -name '*.cpp' 2>/dev/null)" ]; then
+          pio test -e native
+        else
+          echo "No unit tests found in test/ directory, skipping."
+        fi
+
+    - name: Run Renode Hardware Emulation Tests
+      if: hashFiles('emulation/tests/*.robot') != ''
+      uses: antmicro/renode-test-action@v5
+      with:
+        renode-revision: 'master'
+        tests-to-run: 'emulation/tests/easyiot_boot.robot'
